@@ -1,4 +1,4 @@
-freezetbl = {}
+local freezetbl = {}
 local vars = {}
 
 function vars:Set(var,data)
@@ -11,13 +11,7 @@ function vars:Set(var,data)
 end
 
 function vars:Get(var)
-	if freezetbl[var] then
-		return freezetbl[var]
-	else
-		return nil
-	end
+	return freezetbl[var]
 end
 
-table.freeze(vars);
-
-return vars
+return table.freeze(vars)
