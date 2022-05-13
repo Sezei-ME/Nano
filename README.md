@@ -11,7 +11,7 @@ For security reasons, please do not send permission-elevation-related exploits y
 
 ## Lead of Development
 
-- 0bBinary | [GitHub](https://www.github.com/greasemonkey123) | [Roblox](https://www.roblox.com/users/253925749/profile) | [Devforums](https://devforum.roblox.com/u/0bbinary/) | Discord: Binny#9999
+- 0bBinary | [GitHub](https://www.github.com/Sezei) | [Roblox](https://www.roblox.com/users/253925749/profile) | [Devforums](https://devforum.roblox.com/u/0bbinary/) | Discord: Binny#9999
 - Cytrexon | [GitHub](https://github.com/Cytrexon) | [Roblox](https://www.roblox.com/users/1892103295/profile) | [Devforums](https://devforum.roblox.com/u/cytronix/) | Discord: Cytrexon#7102
 
 Additional contributors can be found within the code.
