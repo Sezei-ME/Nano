@@ -13,19 +13,23 @@ return function(env,playerdata,permissionneeded)
 	end
 	
 	for _,v in pairs(perms) do
-		if v == "*" then -- It's a root admin .-.
+		if v == "*" then -- Giving root admin is extremely dangerous; it ignores negatives.
 			return true;
 		else
 			local localperm = string.split(v,".");
+			local negative = (string.split(localperm,"")[1] == "-")
 			if localperm[1] == permissionfolder[1] then
 				if localperm[2] == "*" then
+					if negative then return false end;
 					return true;
 				elseif localperm[2] == permissionfolder[2] then
 					if permissionfolder[3] then
 						if localperm[3] and localperm[3] == permissionfolder[3] or localperm[3] == "*" then
+							if negative then return false end;
 							return true;
 						end
 					else
+						if negative then return false end;
 						return true;
 					end
 				end

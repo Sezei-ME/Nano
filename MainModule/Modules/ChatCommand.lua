@@ -44,6 +44,9 @@ local function FindPlayers(Runner,Name)
 end
 
 return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
+	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then
+		return;
+	end
 	local hasPerm = false
 	local group = env.GetGroupInfo(env,playerdata)
 	if not group then env.Notify(player,{"script_error","A group was not found for "..player.Name}) end;

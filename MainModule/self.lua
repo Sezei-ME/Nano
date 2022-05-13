@@ -80,7 +80,7 @@ function handleJoin(p)
 			local bantime = baninfo[2];
 			local banreason = baninfo[3];
 			local moderator = baninfo[4];
-			
+
 			if bantime == math.huge then
 				p:Kick("You are server-banned for \""..banreason.."\". This ban is active until the server will shutdown.");
 				return;
@@ -91,25 +91,25 @@ function handleJoin(p)
 				return;
 			end
 		end
-		
+
 		local baninfo = env.Store():Load("ban_"..tostring(p.UserId)):wait().Data;
 		if baninfo then
 			local origintime = baninfo[1];
 			local bantime = baninfo[2];
 			local banreason = baninfo[3];
 			local moderator = baninfo[4];
-			
+
 			if bantime == math.huge then
 				p:Kick("You are game-banned for \""..banreason.."\". This ban is permanent.");
 				return;
 			end
-			
+
 			if os.time() <= math.abs(origintime + bantime) then
 				p:Kick("You are game-banned for \""..banreason.."\". Estimated time left: ".. tostring( math.abs( os.time() - (origintime + bantime) ) / 60 ) .." minutes." );
 				return;
 			end
 		end
-		
+
 		if env.Data.Settings.CloudAPI.UseBanlist then
 			local suc,dat = pcall(env.CloudAPI.Get,"/redefinea/banlist/"..p.UserId);
 			if suc then
@@ -137,14 +137,14 @@ function handleJoin(p)
 				warn("Nano | Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
 			end
 		end
-		
+
 		if env.Data.Gamelocked then
 			if env.Data.Gamelocked[1] == true then
 				p:Kick(env.Data.Gamelocked[2]);
 			end
 		end
 	end)
-	
+
 	if game.CreatorType == Enum.CreatorType.User then
 		if p.UserId == game.CreatorId then
 			env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Game Owner"; Immunity = 255; Flags = "*"; UI = true; Chat = true}};
@@ -154,7 +154,7 @@ function handleJoin(p)
 			env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Game Owner"; Immunity = 255; Flags = "*"; UI = true; Chat = true}};
 		end
 	end
-	
+
 	if not env.Ingame.Admins[p.UserId] then
 		for key,v in pairs(env.Data.Settings.Players) do
 			if v["UserId"] then
@@ -189,15 +189,15 @@ function handleJoin(p)
 			end
 		end;
 	end
-		
+
 	if not env.Ingame.Admins[p.UserId] then
 		env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Non-Admin"; Immunity = 0; Flags = ""; UI = false; Chat = false}};
 	end
-	
+
 	local agr = script.NanoUI:Clone();
 	agr.Parent = p.PlayerGui;
 	agr.MainHandler.Disabled = false;
-	
+
 	if env.Data.Settings.Intro.Enabled then
 		if env.Data.Settings.Intro.AdminOnly then
 			if env.Ingame.Admins[p.UserId].FlagGroup.Immunity > 0 then
@@ -207,29 +207,29 @@ function handleJoin(p)
 			env.Intro(p)
 		end
 	end
-	
+
 	if not env.Ingame.Admins[p.UserId].FlagGroup.UI then
 		agr.Main.Visible = false;
 		agr.MouseFollow.Visible = false;
 	end
 
-	if env.Data.Settings.ChatCommands.Active == true then
-		local function handleMsg(msg)
-			if string.sub(msg,1,#env.Data.Settings.ChatCommands.Prefix) == env.Data.Settings.ChatCommands.Prefix then
-				local command = string.split(msg," ")[1]
-				command = string.lower(string.sub(command,#env.Data.Settings.ChatCommands.Prefix+1))
-				if env.Data.Commands[command] then
-					local succ,err = env.ChatCommand(env,p,env.Ingame.Admins[p.UserId],env.Data.Commands[command],msg);
-					if not succ then
-						env.Event:FireClient(p,'CommandFail',err)
-					end
+	local function handleMsg(msg)
+		if string.sub(msg,1,#env.Data.Settings.ChatCommands.Prefix) == env.Data.Settings.ChatCommands.Prefix then
+			local command = string.split(msg," ")[1]
+			command = string.lower(string.sub(command,#env.Data.Settings.ChatCommands.Prefix+1))
+			if env.Data.Commands[command] then
+				local s,f = pcall(function()
+					env.ChatCommand(env,p,env.Ingame.Admins[p.UserId],env.Data.Commands[command],msg);
+				end)
+				if not s then
+					env.Notify(p,{"bug","An error has occured with the command: "..f})
 				end
 			end
 		end
-		p.Chatted:Connect(function(msg)
-			handleMsg(msg);
-		end)
 	end
+	p.Chatted:Connect(function(msg)
+		handleMsg(msg);
+	end)
 end
 
 if firstCall then
@@ -243,9 +243,24 @@ if firstCall then
 			warn("An error has occured while attempting to load AdminGUI Rewritten: The settings module is missing.");
 			return
 		end
+
+		env.Data.BaseSettings = {}
+		for k,v in pairs(env.Data.Settings) do
+			env.Data.BaseSettings[k] = v;
+		end
 		
-		if not env.SettingsValidator(env.Data.Settings) then
+		local savedsettings = env.Store():Load("Nano_Settings"):wait().Data
+		
+		if savedsettings then
+			env.Data.Settings = savedsettings;
+		end
+		
+		local settingsvalid = env.SettingsValidator(env.Data.Settings)
+		
+		if not settingsvalid and not savedsettings then
 			warn("Nano | Due to a settings error, your support attempt will be voided.\nPlease fix the above issues before contacting support if any issues indeed occur.")
+		elseif savedsettings and not settingsvalid then
+			warn("Nano | Your datastore key's settings are corrupted.\nPlease attempt to switch the datastore key before contacting support.")
 		end
 
 		if loader:FindFirstChild("Functions") then
@@ -293,7 +308,7 @@ if firstCall then
 	end
 else
 	return -- Return nothing, but don't init the admin again either.
-	-- return env
+
 		-- If you want to return the environment, or literally anything else, you will need to fork the module; I do not allow this with a "vanilla"
 		-- module, since it could result in bad actors getting into the environment without your knowledge.
 		-- Do so at your own risk only; and remember; forking the main module rather than using functions will void any attempt to support you.

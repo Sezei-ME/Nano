@@ -1,6 +1,5 @@
 --[[AtAltitude's Classic Datastore Module || Forked by 0bBinary for Sezei.me's uses.
 --	EEDS / Even Easier DataStore
---  Version 3 (xd)
 
 	API spec:
 	
@@ -81,6 +80,15 @@ local categories 	= {}
 local tasks 		= {}
 local taskQueue 	= {}
 
+local olderror = error
+function error(debg,...)
+	if game:GetService("RunService"):IsStudio() then
+		print(debg)
+	end
+	
+	return olderror(...)
+end
+
 --Module
 function Module(name,env,isOnline)
 	--Check if we've already done all the hard work, and if yes, just give them what we already have
@@ -113,6 +121,7 @@ function Module(name,env,isOnline)
 	DataCategory.Store = dataStoreSvc:GetDataStore(name)
 	DataCategory.Name = name
 	function DataCategory:Save(key,data)
+		if type(key) ~= "string" then error(key,"Even Easier Datastore | Expected string, got "..type(key)) end
 		--Overwrite old data so we don't waste precious requests
 		if (tasks[key]) then tasks[key].Data = data return tasks[key] end
 
@@ -428,6 +437,8 @@ task.spawn(function()
 								local dat = Task.Category.Store:GetAsync(Task.Key)
 								if type(dat) == "string" and string.sub(dat,1,5) == "_tbl:" then
 									Task.Data = httpSvc:JSONDecode(string.sub(dat,6));
+								else
+									Task.Data = dat
 								end
 							end
 						end
@@ -455,7 +466,7 @@ task.spawn(function()
 								Task.Data = data
 							end
 						end
-						--[[print("Task of type " 
+						--[[print("Task of type "  -- debug
 							.. Task.Type .. " on key " 
 							.. Task.Key .. " succeeded.")]]
 					else
@@ -475,7 +486,7 @@ task.spawn(function()
 						end
 
 						--Also, we'll tell you so you know what's happening.
-						--print("Saving to key '" .. Task.Key .. "' failed with error: \"" .. err .. "\", retrying in " .. Task.NextTry .. " seconds")
+						--print("Even Easier Datastore | Saving to key '" .. Task.Key .. "' failed with error: \"" .. err .. "\", retrying in " .. Task.NextTry .. " seconds")
 						Task.Data = data
 					end
 

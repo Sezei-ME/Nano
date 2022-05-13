@@ -7,24 +7,132 @@ local mfollow = script.Parent.MouseFollow;
 local scroll = main.Scroll_Main;
 local command = main.InCommand;
 local notification = script.Parent.Notification;
-local Assets = script.Assets
-local mouse = game:GetService("Players").LocalPlayer:GetMouse(); -- wew old tech :troll:
+local Assets = script.Assets;
+local players = game:GetService("Players");
+local mouse = players.LocalPlayer:GetMouse(); -- wew old tech :troll:
 local sendEvent;
 local resolveCache = {};
 local interactDebounce = false;
-local MouseOverModule = require(script.HoverClient)
+local MouseOverModule = require(script.HoverClient);
+local NanoWorks = require(script.NanoWorks);
+local SmothingModule = require(script.SLTT);
 local commandContributions = {};
 local UIS = game:GetService("UserInputService")
 -- Get Remote
 local remote:RemoteFunction = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Remote");
 local event:RemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Event");
+
+local notificationsqueue = {}
+-- Queue; {icon,message,inprogress};
+
+local function playSound(soundId)
+	if type(soundId) == "string" then
+		local sound = Instance.new("Sound");
+		sound.SoundId = soundId;
+		sound.Parent = script.Parent;
+		local loaded = false;
+		task.spawn(function()
+			task.wait(5)
+			if not loaded then
+				sound:Destroy();
+			end
+		end)
+		sound.Loaded:Connect(function()
+			loaded = true;
+			sound:Play();
+		end)
+		sound.Ended:Connect(function()
+			sound:Destroy();
+			return true;
+		end)
+	else
+		return false;
+	end
+end
+
+local function runNotification(icon,message,sound)
+	local s,f = pcall(function() script.Parent.Queue.Inner:FindFirstChild("1"):Destroy(); end);
+	if not s then warn(f) end
+	if not notificationsqueue[2] then
+		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
+	end
+	notification.ImageLabel.Image = icon;
+	notification.Message.Text = message;
+	-- Start of notification;
+	notification.fill.Size = UDim2.new(1,0,1,0);
+	notification:TweenPosition(UDim2.new(0.5,0,1,-30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,false,function()
+		task.wait(0.07);
+		if sound and settings.Sounds[2] == true then
+			playSound(sound)
+		end;
+		notification:TweenSize(UDim2.new(0,notification.Message.TextBounds.X+38,0,30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,false,function()
+			notification.fill:TweenSize(UDim2.new(0,0,1,0),Enum.EasingDirection.Out,Enum.EasingStyle.Linear,math.clamp((notification.Message.TextBounds.X/70),5,15),true);
+			task.wait(math.clamp((notification.Message.TextBounds.X/70),5,15)); -- All Notifications to be 5 to 15 seconds.
+			notification:TweenSize(UDim2.new(0,30,0,30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,false,function()
+				task.wait(0.07);
+				notification:TweenPosition(UDim2.new(0.5,0,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,false,function()
+					notification.fill.Size = UDim2.new(1,0,1,0);
+					task.wait(1); -- Cooldown
+					table.remove(notificationsqueue,1);
+					bind:Fire("NotificationEnded");
+					if notificationsqueue[1] then
+						pcall(function()
+							for _,v in pairs(script.Parent.Queue.Inner:GetChildren()) do if tonumber(v.Name) then v.Name = tostring( tonumber(v.Name) - 1 ) end; end;
+						end)
+						notificationsqueue[1][3] = true;
+						runNotification(notificationsqueue[1][1],notificationsqueue[1][2],notificationsqueue[1][4]);
+					end
+				end)
+			end);
+		end);
+	end)
+end
+
+local function queueNotification(icon:string,message:string,sound:string?)
+	if not notificationsqueue[1] then -- If the notifications queue is non existent;
+		table.insert(notificationsqueue,{icon,message,true,sound});
+		local l = script.Parent.Queue.Inner.Template:Clone();
+		l.Parent = script.Parent.Queue.Inner
+		l.Visible = true;
+		l.Name = "1";
+		l.Image = icon;
+		runNotification(icon,message,sound);
+	elseif notificationsqueue[1][3] == false then -- If for whatever reason the notifications queue's being held by the 1st instance.
+		table.insert(notificationsqueue,{icon,message,false,sound});
+		local l = script.Parent.Queue.Inner.Template:Clone();
+		l.Parent = script.Parent.Queue.Inner
+		l.Visible = true;
+		l.Name = tostring(#notificationsqueue);
+		l.Image = icon;
+		runNotification(notificationsqueue[1][1],notificationsqueue[1][2],notificationsqueue[1][4]);
+	else
+		table.insert(notificationsqueue,{icon,message,false,sound});
+		local l = script.Parent.Queue.Inner.Template:Clone();
+		l.Parent = script.Parent.Queue.Inner
+		l.Visible = true;
+		l.Name = tostring(#notificationsqueue);
+		l.Image = icon;
+		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
+	end
+end
+
+local waitingforserver=true;
+task.spawn(function()
+	task.wait(5);
+	
+	if waitingforserver == true then
+		warn("Nano | If you see this, please contact the development team on either Axelius or Sezei.me discords for assistance. Error code: -1: "..require(script.ErrorCodes):ResolveCode(-1))
+		queueNotification("http://www.roblox.com/asset/?id=6031071057","Looks like the server is taking a while to respond. Nano can not run without the server, hence it will stay dormant.")
+	end
+end)
+
 local canUse,Build = remote:InvokeServer("CanUseUI")
 local inTargetMode = false; -- For player-targeting mode when clicking on the cursor
 local introstr = remote:InvokeServer("GetStrings",{"Intro_Top","Intro_Middle"}); -- Get the Intro_Top and Intro_Middle strings from the server.
 local serverAccentColor = remote:InvokeServer("GetSetting","AccentColor");
 local favs = remote:InvokeServer("getFavs");
 local auth = remote:InvokeServer("IsAuthed");
-
+waitingforserver = false
 if not serverAccentColor then
 	serverAccentColor = {
 		Color = Color3.new(0, 0.666667, 1);
@@ -33,7 +141,7 @@ if not serverAccentColor then
 end
 
 local function isBright(color:Color3)
-	local brightness = (color.R * 0.6) + (color.G * 0.75) + (color.B * 0.65);
+	local brightness = (color.R * 0.45) + (color.G * 0.65) + (color.B * 0.55);
 	if brightness >= 1 then
 		return true
 	else
@@ -46,6 +154,7 @@ local settings = {
 	-- Userdata Types: {isLocal, {Type, Value}, CustomName}
 	ShowCommandContributions = {false,false,"Show Contributors"};
 	ShowTargetmodeHint = {false,true,"Target Mode Hinting"};
+	Sounds = {false,true,"Nano Sounds"};
 	--UIPosition = {true,{"dropdown",{Default = "Left"; Options = {"Left", "Right", "Center"}}},"UI Position",function(val)
 	--	print(val);
 	--end};
@@ -127,7 +236,12 @@ for key,val in pairs(settings) do
 end
 
 mfollow.Visible = false;
-main.Version.Text = Build;
+
+task.spawn(function()
+	main.Version.Text = Build;
+	main.Version.TextTransparency = 1
+	SmothingModule:Smoothify("You are running NANO "..Build,main.Version,5)
+end)
 
 if not canUse then
 	main.Visible = false;
@@ -145,36 +259,8 @@ local contributions = {
 	[1094977] = {"Contributor", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668911"};
 	[711971214] = {"Notable Feedback", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668946"};
 	[153503346] = {"S.ME Administrator", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6035078889"};
-	[163986693] = {"S.ME Administrator", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6035078889"};
+	[163986693] = {"S.ME Administrator\nContributor", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6035078889"};
 }
-
-local notificationsqueue = {}
--- Queue; {icon,message,inprogress};
-
-local function playSound(soundId)
-	if type(soundId) == "string" then
-		local sound = Instance.new("Sound");
-		sound.SoundId = soundId;
-		sound.Parent = script.Parent;
-		local loaded = false;
-		task.spawn(function()
-			task.wait(5)
-			if not loaded then
-				sound:Destroy();
-			end
-		end)
-		sound.Loaded:Connect(function()
-			loaded = true;
-			sound:Play();
-		end)
-		sound.Ended:Connect(function()
-			sound:Destroy();
-			return true;
-		end)
-	else
-		return false;
-	end
-end
 
 UIS.WindowFocused:Connect(function()
 	focused = true;
@@ -235,6 +321,43 @@ local function runMessage(title,message,icon)
 	end);
 end
 
+local function messageReceived(senderId,message)
+	local asset = script.Assets:FindFirstChild("PrivateMessage"):Clone();
+	asset.Parent = script.Parent;
+	asset.Visible = true;
+	asset.Inner.Title.Text = "Private Conversation with "..players:GetNameFromUserIdAsync(senderId)
+	asset.Inner.Msg.Text = message
+	asset:TweenPosition(UDim2.new(0.5,0,0.5,-47),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true)
+	
+	asset.Inner.Frame.TextBox:GetPropertyChangedSignal("Text"):Connect(function() -- Limit characters to 90 (bruteforce way)
+		if asset.Inner.Frame.TextBox.Text.len() >= 90 then
+			asset.Inner.Frame.TextBox.Text = string.sub(1,90);
+		end
+	end)
+	
+	asset.Inner.Frame.DeleteMessage.MouseButton1Click:Connect(function()
+		asset:TweenPosition(UDim2.new(-0.5,0,0.5,-47),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true,function()
+			task.wait(0.5)
+			asset:Destroy();
+		end)
+	end)
+	
+	asset.Inner.Frame.SendMessage.MouseButton1Click:Connect(function()
+		-- send the message before all of the crazy tweens and visuals
+		remote:InvokeServer("SendPrivateMessage",{senderId,asset.Inner.Frame.TextBox.Text});
+		
+		-- proceed with the visuals
+		asset.Inner:TweenSize(UDim2.new(1,0,0,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true)
+		asset:TweenPosition(UDim2.new(0.5,0,0.5,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true,function()
+			task.wait(0.15);
+			asset:TweenPosition(UDim2.new(0.5,0,-0.5,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true,function()
+				task.wait(0.5)
+				asset:Destroy();
+			end)
+		end)
+	end)
+end
+
 local function runHint(title,message,icon)
 	if script.Parent:FindFirstChild("Hint") then script.Parent["Hint"]:Destroy() end;
 	local asset = script.Assets:FindFirstChild("Hint"):Clone();
@@ -255,70 +378,6 @@ local function runHint(title,message,icon)
 			end);
 		end)
 	end);
-end
-
-local function runNotification(icon,message,sound)
-	local s,f = pcall(function() script.Parent.Queue.Inner:FindFirstChild("1"):Destroy(); end);
-	if not s then warn(f) end
-	if not notificationsqueue[2] then
-		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
-	end
-	notification.ImageLabel.Image = icon;
-	notification.Message.Text = message;
-	-- Start of notification;
-	notification.fill.Size = UDim2.new(1,0,1,0);
-	notification:TweenPosition(UDim2.new(0.5,0,1,-30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,false,function()
-		task.wait(0.07);
-		playSound(sound)
-		notification:TweenSize(UDim2.new(0,notification.Message.TextBounds.X+38,0,30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,false,function()
-			notification.fill:TweenSize(UDim2.new(0,0,1,0),Enum.EasingDirection.Out,Enum.EasingStyle.Linear,math.clamp((notification.Message.TextBounds.X/70),5,15),true);
-			task.wait(math.clamp((notification.Message.TextBounds.X/70),5,15)); -- All Notifications to be 5 to 15 seconds.
-			notification:TweenSize(UDim2.new(0,30,0,30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,false,function()
-				task.wait(0.07);
-				notification:TweenPosition(UDim2.new(0.5,0,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,false,function()
-					notification.fill.Size = UDim2.new(1,0,1,0);
-					task.wait(1); -- Cooldown
-					table.remove(notificationsqueue,1);
-					bind:Fire("NotificationEnded");
-					if notificationsqueue[1] then
-						pcall(function()
-							for _,v in pairs(script.Parent.Queue.Inner:GetChildren()) do if tonumber(v.Name) then v.Name = tostring( tonumber(v.Name) - 1 ) end; end;
-						end)
-						notificationsqueue[1][3] = true;
-						runNotification(notificationsqueue[1][1],notificationsqueue[1][2],notificationsqueue[1][4]);
-					end
-				end)
-			end);
-		end);
-	end)
-end
-
-local function queueNotification(icon:string,message:string,sound:string?)
-	if not notificationsqueue[1] then -- If the notifications queue is non existent;
-		table.insert(notificationsqueue,{icon,message,true,sound});
-		local l = script.Parent.Queue.Inner.Template:Clone();
-		l.Parent = script.Parent.Queue.Inner
-		l.Visible = true;
-		l.Name = "1";
-		l.Image = icon;
-		runNotification(icon,message);
-	elseif notificationsqueue[1][3] == false then -- If for whatever reason the notifications queue's being held by the 1st instance.
-		table.insert(notificationsqueue,{icon,message,false,sound});
-		local l = script.Parent.Queue.Inner.Template:Clone();
-		l.Parent = script.Parent.Queue.Inner
-		l.Visible = true;
-		l.Name = tostring(#notificationsqueue);
-		l.Image = icon;
-		runNotification(notificationsqueue[1][1],notificationsqueue[1][2]);
-	else
-		table.insert(notificationsqueue,{icon,message,false,sound});
-		local l = script.Parent.Queue.Inner.Template:Clone();
-		l.Parent = script.Parent.Queue.Inner
-		l.Visible = true;
-		l.Name = tostring(#notificationsqueue);
-		l.Image = icon;
-		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
-	end
 end
 
 local function buildButtons(cmds) -- Build the UI button.
@@ -628,6 +687,9 @@ local function buildButtons(cmds) -- Build the UI button.
 					local receiveddata = remote:InvokeServer("CommandOpened",cmd.Name);
 
 					sendEvent = command.Send.MouseButton1Click:Connect(function()
+						if settings.Sounds[2] == true then
+							script.Sounds.SendingData:Play();
+						end
 						local prefix,sep = remote:InvokeServer("GetSeparator");
 						local readyfields = {}
 						for _,v in pairs(inn:GetChildren()) do
@@ -673,6 +735,10 @@ local function buildButtons(cmds) -- Build the UI button.
 									times -= 1
 								until times == 0
 								command.CommandSent.TextLabel.Text = "Success!"
+								if settings.Sounds[2] == true then
+									script.Sounds.SendingData:Stop();
+									script.Sounds.DataSent:Play();
+								end
 								command.CommandSent.Spinner.Visible = false
 								command.CommandSent.Done.Visible = true
 							elseif type(done[2]) == "nil" then
@@ -683,6 +749,10 @@ local function buildButtons(cmds) -- Build the UI button.
 									times -= 1
 								until times == 0
 								command.CommandSent.TextLabel.Text = "No status returned."
+								if settings.Sounds[2] == true then
+									script.Sounds.SendingData:Stop();
+									script.Sounds.DataSent:Play();
+								end
 								command.CommandSent.Spinner.Visible = false
 								command.CommandSent.Nil.Visible = true
 							elseif type(done[2]) == "boolean" then
@@ -693,6 +763,10 @@ local function buildButtons(cmds) -- Build the UI button.
 									times -= 1
 								until times == 0
 								command.CommandSent.TextLabel.Text = "An error has occured!"
+								if settings.Sounds[2] == true then
+									script.Sounds.SendingData:Stop();
+									script.Sounds.DataSent:Play();
+								end
 								command.CommandSent.Spinner.Visible = false
 								command.CommandSent.Error.Visible = true
 							else
@@ -756,14 +830,22 @@ main.Frame.Refresh.MouseButton1Click:Connect(function()
 end)
 
 event.OnClientEvent:Connect(function(reason,detail)
-	if reason == "CommandFail" then
-		warn("The command has failed: "..detail);
-	elseif reason == "Message" then
+	if reason == "Message" then
+		-- detail1 = title
+		-- detail2 = message
+		-- detail3 = icon
 		runMessage(detail[1],detail[2],detail[3]);
 	elseif reason == "Intro" then
 		runIntro()
 	elseif reason == "Hint" then
+		-- detail1 = title
+		-- detail2 = message
+		-- detail3 = icon
 		runHint(detail[1],detail[2],detail[3]);
+	elseif reason == "PrivateMessage" then
+		-- detail1 = sender
+		-- detail2 = message
+		messageReceived(detail[1],detail[2]);
 	elseif reason == "Notify" then
 		local icon = detail[1];
 		local message = detail[2];
@@ -778,8 +860,8 @@ event.OnClientEvent:Connect(function(reason,detail)
 		
 		local icon = require(script.Icons)(icon);
 		queueNotification(icon,message);
-	elseif reason == "RunFunction" then
-		detail(script);
+	elseif reason == "RunClientFunction" then
+		getfenv()[detail[1]](detail[2],detail[3],detail[4],detail[5],detail[6]);
 	end
 end)
 
@@ -1115,7 +1197,159 @@ for sKey,Value in pairs(settings) do -- Build the settings thing
 		-- Malformed type: If it's userdata, it should be in a table.
 	end
 end
-s = nil; -- Clear from garbage collector (free up memory)
+
+-- Generate the game settings.
+if remote:InvokeServer("HasPermission","Nano.GameSettings") then
+	local button = NanoWorks:NewAsset("Button",{Name = "Open Game Settings", Color = Color3.new(0,0.666667,1)});
+	button.self.Parent = s;
+	button.self.LayoutOrder = 1;
+	button.event:Connect(function()
+		script.Parent.Settings.Visible = true;
+	end)
+	local function settingsRefresh()
+		local sets = remote:InvokeServer("GetGameSettings"); -- double check moment?
+		local plrs = remote:InvokeServer("GetSetting","Players"); -- oof
+		local mods,modsactive = remote:InvokeServer("GetModSettings");
+		-- returns;
+		--[[
+		
+		Sets = {
+			[Category] = {
+				[Name] = {StoredValue}
+			};
+		}
+		
+		]]
+		
+		NanoWorks:ClearFrame(script.Parent.Settings.InnerHolder.Content.Admins);
+		NanoWorks:ClearFrame(script.Parent.Settings.InnerHolder.Content.General);
+		NanoWorks:ClearFrame(script.Parent.Settings.InnerHolder.Content.Mods);
+		
+		local function gameBubble(tbl,prev,parent,stack,name)
+			for category:string,setting:any in pairs(tbl) do
+				local bubble = NanoWorks:CreateBubble(category)
+				bubble.self.Parent = parent
+				bubble.self.Visible = true;
+				bubble.self.Outer.BackgroundColor3 = Color3.new(1-(stack*0.2),0.33333-(stack*0.06666),0);
+				if type(setting) == "table" then				
+					gameBubble(setting,prev..category..".",bubble.self.Outer.Inner,stack+1,name);
+				else
+					bubble.self:Destroy();
+					bubble = nil;
+					local asset = NanoWorks:NewAsset(type(setting),{Name = category,Default = setting});
+					if asset then
+						asset.self.Parent = parent;
+						asset.event:Connect(function(newval)
+							remote:InvokeServer("SetGameSetting",{prev..category,newval})
+						end)
+					elseif type(setting) == "table" then
+						gameBubble(setting,prev..category..".",parent,stack+1);
+					end
+				end
+			end
+		end
+
+		local function permBubble(tbl,prev,parent,stack,name)
+		--[[
+		for category:string,setting:any in pairs(tbl) do
+			local bubble = NanoWorks:CreateBubble(category)
+			bubble.self.Parent = parent
+			bubble.self.Visible = true;
+			bubble.self.Outer.BackgroundColor3 = Color3.new(1-(stack*0.2),0.33333-(stack*0.06666),0);
+			if type(setting) == "table" then				
+				gameBubble(setting,prev..category.."."..category..".",bubble.self.Outer.Inner,stack+1,name);
+			else
+				bubble.self:Destroy();
+				bubble = nil;
+				local asset = NanoWorks:NewAsset(type(setting),{Name = category,Default = setting});
+				if asset then
+					asset.self.Parent = parent;
+					asset.event:Connect(function(newval)
+						remote:InvokeServer("SetGameSetting",{prev..category,newval})
+					end)
+				elseif type(setting) == "table" then
+					gameBubble(setting,prev..category..".",parent,stack+1);
+				end
+			end
+		end
+		--]]
+			NanoWorks:NewAsset("message",{Text = "Unavailable!",Color = Color3.new(1, 0.25098, 0.25098)}).self.Parent = parent
+		end
+
+		local function modsBubble(tbl,prev,parent,stack,name)
+			for category:string,setting:any in pairs(tbl) do
+				local bubble = NanoWorks:CreateBubble(category)
+				bubble.self.Parent = parent
+				bubble.self.Visible = true;
+				bubble.self.Outer.BackgroundColor3 = Color3.new(1-(stack*0.2),0.33333-(stack*0.06666),0);
+				if type(setting) == "table" then				
+					gameBubble(setting,prev..category..".",bubble.self.Outer.Inner,stack+1,name);
+				else
+					bubble.self:Destroy();
+					bubble = nil;
+					local asset;
+					if string.split(category,"")[1] == "_" then
+						asset = NanoWorks:NewAsset("message",{Text = category..": "..setting});
+					else
+						asset = NanoWorks:NewAsset(type(setting),{Name = category,Default = setting});
+					end
+					if asset then
+						asset.self.Parent = parent;
+						asset.event:Connect(function(newval)
+							remote:InvokeServer("SetGameSetting",{prev..category,newval})
+						end)
+					elseif type(setting) == "table" then
+						gameBubble(setting,prev..category..".",parent,stack+1);
+					end
+				end
+			end
+		end
+
+		gameBubble(sets,"",script.Parent.Settings.InnerHolder.Content.General,0)
+		permBubble(plrs,"Players.",script.Parent.Settings.InnerHolder.Content.Admins,0)
+		modsBubble(mods,"",script.Parent.Settings.InnerHolder.Content.Mods,0)
+
+		script.Parent.Settings.InnerHolder.Categories.General.MouseButton1Click:Connect(function()
+			script.Parent.Settings.InnerHolder.Content.General.Visible = true;
+			script.Parent.Settings.InnerHolder.Content.Admins.Visible = false;
+			script.Parent.Settings.InnerHolder.Categories.General.BackgroundColor3 = Color3.fromRGB(255, 85, 0);
+			script.Parent.Settings.InnerHolder.Categories.Admins.BackgroundColor3 = Color3.fromRGB(77,77,77);
+			if modsactive >= 1 then
+				script.Parent.Settings.InnerHolder.Categories.Mods.BackgroundColor3 = Color3.fromRGB(77,77,77)
+				script.Parent.Settings.InnerHolder.Content.Mods.Visible = false;
+			end
+		end)
+		script.Parent.Settings.InnerHolder.Categories.Admins.MouseButton1Click:Connect(function()
+			script.Parent.Settings.InnerHolder.Content.General.Visible = false;
+			script.Parent.Settings.InnerHolder.Content.Admins.Visible = true;
+			script.Parent.Settings.InnerHolder.Categories.General.BackgroundColor3 = Color3.fromRGB(77, 77, 77);
+			script.Parent.Settings.InnerHolder.Categories.Admins.BackgroundColor3 = Color3.fromRGB(255, 85, 0);
+			if modsactive >= 1 then
+				script.Parent.Settings.InnerHolder.Categories.Mods.BackgroundColor3 = Color3.fromRGB(77,77,77)
+				script.Parent.Settings.InnerHolder.Content.Mods.Visible = false;
+			end
+		end)
+
+		if modsactive >= 1 then
+			script.Parent.Settings.InnerHolder.Categories.Mods.BackgroundColor3 = Color3.fromRGB(77,77,77)
+			script.Parent.Settings.InnerHolder.Categories.Mods.MouseButton1Click:Connect(function()
+				script.Parent.Settings.InnerHolder.Content.General.Visible = false;
+				script.Parent.Settings.InnerHolder.Content.Admins.Visible = false;
+				script.Parent.Settings.InnerHolder.Content.Mods.Visible = true;
+				script.Parent.Settings.InnerHolder.Categories.General.BackgroundColor3 = Color3.fromRGB(77, 77, 77);
+				script.Parent.Settings.InnerHolder.Categories.Admins.BackgroundColor3 = Color3.fromRGB(77, 77, 77);
+				script.Parent.Settings.InnerHolder.Categories.Mods.BackgroundColor3 = Color3.fromRGB(255,85,0);
+			end)
+		end
+	end
+	
+	settingsRefresh();
+	script.Parent.Settings.InnerHolder.Categories.Refresh.MouseButton1Click:Connect(function()
+		settingsRefresh();
+	end)
+else
+	script.Parent.Settings:Destroy();
+end
 
 --Initial ping update
 local starttick = tick();

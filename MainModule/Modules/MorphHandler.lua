@@ -1,5 +1,3 @@
--- i think cytrexon added this here lol idk
-
 local module = {}
 
 -- << VARIABLES >>

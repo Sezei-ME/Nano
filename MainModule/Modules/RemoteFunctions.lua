@@ -61,6 +61,46 @@ return function(api)
 			return true
 		elseif key == "GetSetting" then
 			return api.Data.Settings[reason];
+		elseif key == "GetGameSettings" then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+				local send = {}
+				for k,v in pairs(api.Data.Settings) do
+					if api.Data.BaseSettings[k] then
+						send[k] = v;
+					end
+				end
+
+				-- Protected Settings
+				send["Players"] = nil;
+				send["FlagGroups"] = nil;
+				send["Datastore"] = nil;
+				send["CloudAPI"] = nil;
+
+				-- Return the edited Settings table
+				return send;
+			end
+		elseif key == "GetModSettings" then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+				local sending = {}
+				local amnt = 0;
+				for k,v in pairs(api.Data.Settings) do
+					if not api.Data.BaseSettings[k] then
+						sending[k] = v;
+						amnt+=1;
+					end
+				end
+				return sending,amnt
+			else
+				return {};
+			end
+		elseif key == "SetGameSetting" then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+				local set = string.split(reason[1],".");
+				api.Data.Settings[set[1]][set[2]] = reason[2];
+				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+				api.Notify(player,{"bulb","You set \""..reason[1].."\" to "..tostring(reason[2])})
+				return -- return after the save
+			end
 		elseif key == "IsAuthed" then
 			return api.CloudAPI.CheckAuth(player);
 		elseif key == "SendCommand" then
@@ -85,12 +125,14 @@ return function(api)
 					return api.Data.Commands[string.lower(reason)][1].OnOpen(player, api)
 				end
 			end
+		elseif key == "SendPrivateMessage" then
+			return event:FireClient(game:GetService("Players"):GetPlayerByUserId(reason[1]),"PrivateMessage",{player.UserId,reason[2]})
 		elseif key == "CommandChangedValue" then
 			-- {command, field, value}
 			local cmd = reason[1]
 			local field = reason[2]
 			local newval = reason[3]
-			
+
 			if api.Data.Commands[string.lower(cmd)] then
 				cmd = api.Data.Commands[string.lower(cmd)][1]
 				if cmd.Fields[field] then
