@@ -38,6 +38,8 @@ RunService.Heartbeat:Connect(function()
 			local newValue = math.max(0, module.Storage[key][1] - 1)
 			module.Storage[key][1] = newValue
 		end
+
+                module.lastDeduction = tick()
 	end
 end
 
