@@ -626,10 +626,13 @@ local function buildButtons(cmds) -- Build the UI button.
 							p.Parent = inn;
 						elseif string.lower(field.Type) == "time" then
 							p = script.Assets.Time:Clone();
+							p.Name = k;
 							p.Txt.Text = field.Text;
 							if field.Required then
 								p.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
 							end
+							p.TextBox.Text = "1";
+							p.Value.Value = "1";
 							p.Visible = true;
 							p.Parent = inn;
 						elseif string.lower(field.Type) == "boolean" then
