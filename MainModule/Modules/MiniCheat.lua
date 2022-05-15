@@ -39,8 +39,8 @@ RunService.Heartbeat:Connect(function()
 			module.Storage[key][1] = newValue
 		end
 
-                module.lastDeduction = tick()
+		module.lastDeduction = tick()
 	end
-end
+end) -- was missing the )
 
 return module
