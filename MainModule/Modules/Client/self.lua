@@ -22,6 +22,18 @@ local UIS = game:GetService("UserInputService")
 local remote:RemoteFunction = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Remote");
 local event:RemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Event");
 
+local Roblox = {
+	warn = warn;
+}
+
+local function warn(code, ...)
+	if tonumber(code) then
+		Roblox.warn("Nano Client | Error "..code.." - "..require(script.ErrorCodes):ResolveCode(code).." | ",...)
+	else
+		Roblox.warn("Nano Client | ",...)
+	end
+end
+
 local notificationsqueue = {}
 -- Queue; {icon,message,inprogress};
 
@@ -51,8 +63,7 @@ local function playSound(soundId)
 end
 
 local function runNotification(icon,message,sound)
-	local s,f = pcall(function() script.Parent.Queue.Inner:FindFirstChild("1"):Destroy(); end);
-	if not s then warn(f) end
+	pcall(function() script.Parent.Queue.Inner:FindFirstChild("1"):Destroy(); end);
 	if not notificationsqueue[2] then
 		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
 	end
@@ -119,9 +130,9 @@ end
 local waitingforserver=true;
 task.spawn(function()
 	task.wait(5);
-	
+
 	if waitingforserver == true then
-		warn("Nano | If you see this, please contact the development team on either Axelius or Sezei.me discords for assistance. Error code: -1: "..require(script.ErrorCodes):ResolveCode(-1))
+		warn(-1,"Nano will stay dormant until the server successfully wakes. It might take a while.")
 		queueNotification("http://www.roblox.com/asset/?id=6031071057","Looks like the server is taking a while to respond. Nano can not run without the server, hence it will stay dormant.")
 	end
 end)
@@ -176,18 +187,18 @@ if not serverAccentColor.Forced then
 		Assets.Hint.Image.BackgroundColor3 = val.Color;
 		Assets.Message.BackgroundColor3 = val.Color;
 		Assets.Message.Image.BackgroundColor3 = val.Color;
-		
+
 		if script.Parent:FindFirstChild("Intro") then
 			script.Parent.Intro.BackgroundColor3 = val.Color;
 			script.Parent.Intro.Image.BackgroundColor3 = val.Color;
 			script.Parent.Intro.Image.ImageColor3 = (isBright(val.Color) and Color3.new(0,0,0) or Color3.new(1,1,1));
 		end
-		
+
 		if script.Parent:FindFirstChild("Message") then
 			script.Parent.Message.BackgroundColor3 = val.Color;
 			script.Parent.Message.Image.BackgroundColor3 = val.Color;
 		end
-		
+
 		if script.Parent:FindFirstChild("Hint") then
 			script.Parent.Hint.BackgroundColor3 = val.Color;
 			script.Parent.Hint.Image.BackgroundColor3 = val.Color;
@@ -259,7 +270,7 @@ local contributions = {
 	[1094977] = {"Contributor", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668911"};
 	[711971214] = {"Notable Feedback", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668946"};
 	[153503346] = {"S.ME Administrator", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6035078889"};
-	[163986693] = {"S.ME Administrator\nContributor", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6035078889"};
+	[163986693] = {"S.ME Administrator\nContributor", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6022668911"};
 }
 
 UIS.WindowFocused:Connect(function()
@@ -328,24 +339,24 @@ local function messageReceived(senderId,message)
 	asset.Inner.Title.Text = "Private Conversation with "..players:GetNameFromUserIdAsync(senderId)
 	asset.Inner.Msg.Text = message
 	asset:TweenPosition(UDim2.new(0.5,0,0.5,-47),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true)
-	
+
 	asset.Inner.Frame.TextBox:GetPropertyChangedSignal("Text"):Connect(function() -- Limit characters to 90 (bruteforce way)
 		if asset.Inner.Frame.TextBox.Text.len() >= 90 then
 			asset.Inner.Frame.TextBox.Text = string.sub(1,90);
 		end
 	end)
-	
+
 	asset.Inner.Frame.DeleteMessage.MouseButton1Click:Connect(function()
 		asset:TweenPosition(UDim2.new(-0.5,0,0.5,-47),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true,function()
 			task.wait(0.5)
 			asset:Destroy();
 		end)
 	end)
-	
+
 	asset.Inner.Frame.SendMessage.MouseButton1Click:Connect(function()
 		-- send the message before all of the crazy tweens and visuals
 		remote:InvokeServer("SendPrivateMessage",{senderId,asset.Inner.Frame.TextBox.Text});
-		
+
 		-- proceed with the visuals
 		asset.Inner:TweenSize(UDim2.new(1,0,0,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true)
 		asset:TweenPosition(UDim2.new(0.5,0,0.5,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.4,true,function()
@@ -387,7 +398,7 @@ local function buildButtons(cmds) -- Build the UI button.
 			v:Destroy();
 		end
 	end
-	
+
 	local titl = scroll._Title:Clone();
 	local items = {}
 	titl.Name = "_Favourites";
@@ -395,7 +406,7 @@ local function buildButtons(cmds) -- Build the UI button.
 	titl.Parent = scroll;
 	titl.Visible = false;
 	titl.LayoutOrder = 0;
-	
+
 	local folders = {}
 	for key,cmd in pairs(cmds) do -- Sort the commands into their respective folders.
 		if not folders[cmd[2]] then
@@ -449,7 +460,7 @@ local function buildButtons(cmds) -- Build the UI button.
 				btn.Text = cmd.Name;
 				if not cmd.Color then -- Make a random color if one is not provided.
 					cmd.Color = Color3.new(math.random(),math.random(),math.random());
-				
+
 				end
 				if cmd.Description and cmd.Description.Short then
 					btn.HoverHint.Value = cmd.Description.Short;
@@ -461,13 +472,13 @@ local function buildButtons(cmds) -- Build the UI button.
 				table.sort(folder, function(first, second)
 					return first.Name:lower() < second.Name:lower()
 				end)
-				
+
 				if favs[btn.Name] then
 					btn.Starred.Image = "http://www.roblox.com/asset/?id=6031068423";
 				else
 					btn.Starred.Image = "http://www.roblox.com/asset/?id=6031068425";
 				end
-				
+
 				if type(cmd.Credit) == "table" and cmd.Credit[1] then
 					for _,uid in pairs(cmd.Credit) do
 						if commandContributions[uid] then
@@ -476,7 +487,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							commandContributions[uid] = 1
 						end
 					end
-					
+
 				end
 
 				task.spawn(function()
@@ -499,7 +510,7 @@ local function buildButtons(cmds) -- Build the UI button.
 						btn.TextSize += 2
 					end
 				end)
-				
+
 				btn.Starred.MouseButton1Click:Connect(function()
 					task.spawn(function()
 						remote:InvokeServer("updateFavs",btn.Name)
@@ -527,7 +538,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							v:Destroy();
 						end
 					end
-					
+
 					if cmd.Description and cmd.Description.Long then
 						local p = script.Assets.Description:Clone();
 						p.Name = k;
@@ -537,13 +548,13 @@ local function buildButtons(cmds) -- Build the UI button.
 						p.Visible = true;
 						p.Parent = inn;
 					end
-					
+
 					if type(cmd.Sendable) == "boolean" and not cmd.Sendable then
 						command.Send.Visible = false;
 					else
 						command.Send.Visible = true;
 					end
-					
+
 					for k,field in pairs(cmd.Fields) do
 						local p;
 						if string.lower(field.Type) == "player" or string.lower(field.Type) == "safeplayer" or string.lower(field.Type) == "players" or string.lower(field.Type) == "safeplayers" then
@@ -672,7 +683,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							p.Visible = true;
 							p.Parent = inn;
 						end
-						
+
 						if p then
 							p:SetAttribute("InternalKey",field.Internal)
 							if field.Permission then
@@ -681,12 +692,12 @@ local function buildButtons(cmds) -- Build the UI button.
 								end
 							end
 						end
-						
+
 						p:FindFirstChild("Value").Changed:Connect(function(newval)
 							local receiveddata = remote:InvokeServer("CommandChangedValue",{cmd.Name,k,newval});
 						end)
 					end
-					
+
 					local receiveddata = remote:InvokeServer("CommandOpened",cmd.Name);
 
 					sendEvent = command.Send.MouseButton1Click:Connect(function()
@@ -701,11 +712,10 @@ local function buildButtons(cmds) -- Build the UI button.
 									if v.Value:IsA("StringValue") then
 										if v.Value.Value == "" then
 											v.Txt.TextColor3 = Color3.new(1,0,0)
-											game:GetService("TweenService"):Create(
-												v.Txt, TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
-												{
-													TextColor3 = Color3.new(1,1,1);		
-												}
+											game:GetService("TweenService"):Create(v.Txt, TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+											{
+												TextColor3 = Color3.new(1,1,1);		
+											}
 											):Play()
 											return
 										end
@@ -772,6 +782,7 @@ local function buildButtons(cmds) -- Build the UI button.
 								end
 								command.CommandSent.Spinner.Visible = false
 								command.CommandSent.Error.Visible = true
+								
 							else
 								local times = 10
 								repeat
@@ -852,7 +863,7 @@ event.OnClientEvent:Connect(function(reason,detail)
 	elseif reason == "Notify" then
 		local icon = detail[1];
 		local message = detail[2];
-		
+
 		-- Success: http://www.roblox.com/asset/?id=6023426945
 		-- Unsuccessful: http://www.roblox.com/asset/?id=6031094677
 		-- Error: http://www.roblox.com/asset/?id=6031071057
@@ -860,7 +871,7 @@ event.OnClientEvent:Connect(function(reason,detail)
 		-- Script error: http://www.roblox.com/asset/?id=6022668916
 		-- Notification: http://www.roblox.com/asset/?id=6023426923
 		-- Hint: http://www.roblox.com/asset/?id=6026568247
-		
+
 		local icon = require(script.Icons)(icon);
 		queueNotification(icon,message);
 	elseif reason == "RunClientFunction" then
@@ -889,7 +900,7 @@ end)
 for _,v in pairs(scroll:GetChildren()) do
 	if v:IsA("TextButton") and v:FindFirstChild("HoverHint") then
 		local MouseEnter, MouseLeave = MouseOverModule.MouseEnterLeaveEvent(v)
-		
+
 		MouseEnter:Connect(function()
 			if mouseinUI and scroll.Visible and v.Visible then
 				mfollow.Hover_2d.Text = " <b>"..v.Text.."</b>\n"..v.HoverHint.Value;
@@ -981,7 +992,7 @@ bind.Event:Connect(function(event,inst)
 	elseif event == "SettingChanged" then -- {setting,value}
 		-- Settings structure: [name] = {isLocal, value}
 		settings[inst[1]][2] = inst[2]
-		
+
 		if settings[inst[1]][1] == false then
 			remote:InvokeServer("SetCSetting",{inst[1],inst[2]});
 		end
@@ -1001,9 +1012,14 @@ local function InsertToC(C:Instance,inst:Instance)
 end
 --Credits
 local C = main.TopUI.Credits
+
+-- Organise positions by contributions. (Command Contributions > System Contributions)
+
+-- Do the stuff for the already organised contributors
 for uid,conts in pairs(commandContributions) do
 	local inst = script.Assets.CreditTemplate:Clone();
 	inst.Name = uid
+	inst.LayoutOrder = 500 - conts
 	local t = "";
 	if contributions[uid] then
 		t = contributions[uid][1]
@@ -1052,7 +1068,7 @@ for uid,tbl in pairs(contributions) do
 		inst.Image.Image = game:GetService("Players"):GetUserThumbnailAsync(uid,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size48x48);
 		inst.Visible = true;
 		inst.Size = UDim2.new(1,-8,0,math.max(50,inst.Creations.TextBounds.Y+27)) -- Position + 6 Pixel Spacing
-		
+		inst.LayoutOrder = 500 + string.byte(inst.name.Text:sub(1,1));
 		InsertToC(C,inst);
 	end
 end
@@ -1142,10 +1158,10 @@ for sKey,Value in pairs(settings) do -- Build the settings thing
 		end)
 		set.Visible = true;
 	elseif type(Value[2]) == "string" then
-		warn("Unsupported settings type: String [Key: "..sKey.."]");
+		warn(-2,"Unsupported settings type: String [Key: "..sKey.."]");
 		-- Skip: Unsupported yet
 	elseif type(Value[2]) == "number" then
-		warn("Unsupported settings type: Number [Key: "..sKey.."]");
+		warn(-2,"Unsupported settings type: Number [Key: "..sKey.."]");
 		-- Skip: Unsupported yet
 	elseif type(Value[2]) == "table" then
 		if string.lower(Value[2][1]) == "color" then
@@ -1191,12 +1207,12 @@ for sKey,Value in pairs(settings) do -- Build the settings thing
 			end);
 			set.Visible = true;
 		else
-			warn("Unsupported settings type: "..Value[2][1].." [Key: "..sKey.."]");
+			warn(-2,"Unsupported settings type: "..Value[2][1].." [Key: "..sKey.."]");
 		end
 		-- {truetype,data}
 		-- Skip: Unsupported yet
 	elseif type(Value[2]) == "userdata" then
-		warn("Malformed settings type at "..sKey);
+		warn(-2,"Malformed settings type at "..sKey);
 		-- Malformed type: If it's userdata, it should be in a table.
 	end
 end
@@ -1223,11 +1239,11 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 		}
 		
 		]]
-		
+
 		NanoWorks:ClearFrame(script.Parent.Settings.InnerHolder.Content.Admins);
 		NanoWorks:ClearFrame(script.Parent.Settings.InnerHolder.Content.General);
 		NanoWorks:ClearFrame(script.Parent.Settings.InnerHolder.Content.Mods);
-		
+
 		local function gameBubble(tbl,prev,parent,stack,name)
 			for category:string,setting:any in pairs(tbl) do
 				local bubble = NanoWorks:CreateBubble(category)
@@ -1345,7 +1361,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 			end)
 		end
 	end
-	
+
 	settingsRefresh();
 	script.Parent.Settings.InnerHolder.Categories.Refresh.MouseButton1Click:Connect(function()
 		settingsRefresh();

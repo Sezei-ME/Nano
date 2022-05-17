@@ -1,5 +1,18 @@
 local firstCall = true
 local env = require(script.BaseEnvironment);
+local Decoder = require(script.ErrorCodes);
+
+local Roblox = {
+	warn = warn;
+}
+
+local function warn(code, ...)
+	if tonumber(code) then
+		Roblox.warn("Nano | Error "..code.." - "..Decoder:ResolveCode(code).." | ",...)
+	else
+		Roblox.warn("Nano | ",...)
+	end
+end
 
 for _,v in pairs(script:GetChildren()) do
 	if v:IsA("ModuleScript") then
@@ -54,7 +67,7 @@ function toCommands(folder,stack)
 				if mv.OnLoad then -- if OnLoad exists in the table, load it now
 					local suc,res = pcall(function() mv.OnLoad(env) end);
 					if not suc then
-						warn("An OnLoad function has failed; Source: ".. v.Parent.Name .. "." .. v.Name.." ; "..res);
+						warn(3, "An OnLoad function has failed; Source: ".. v.Parent.Name .. "." .. v.Name.." ; "..res);
 					end
 					mv.OnLoad = nil;
 				end
@@ -62,7 +75,7 @@ function toCommands(folder,stack)
 				env.Data.Commands[string.lower(mv.Name)] = {mv,stack}
 			end)
 			if not s then
-				warn("A command has failed to get compiled; "..f)
+				warn(3, "A command has failed to get compiled; "..f)
 			end
 		elseif v:IsA('Folder') then
 			toCommands(v,((stack~="" and stack.."." or "") .. v.Name))
@@ -134,7 +147,7 @@ function handleJoin(p)
 					end
 				end
 			else
-				warn("Nano | Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
+				warn(4, "Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
 			end
 		end
 
@@ -175,9 +188,9 @@ function handleJoin(p)
 			elseif v["Group"] then
 				local rank = p:GetRankInGroup(tonumber(v["Group"]));
 				if not v["Rank"] then
-					warn("Nano | Malformed Settings: 'Group' flags require a rank table.")
+					warn(2,"Malformed Settings: 'Group' flags require a rank table.")
 				elseif type(v["Rank"]) ~= "table" then
-					warn("Nano | Malformed Settings: 'Rank' flag must be a table type.")
+					warn(2,"Nano | Malformed Settings: 'Rank' flag must be a table type.")
 				else
 					for rnk,vv in pairs(v["Rank"]) do
 						if rank == tonumber(rnk) then
@@ -195,6 +208,7 @@ function handleJoin(p)
 	end
 
 	local agr = script.NanoUI:Clone();
+	script.ErrorCodes:Clone().Parent = agr;
 	agr.Parent = p.PlayerGui;
 	agr.MainHandler.Disabled = false;
 
@@ -240,7 +254,7 @@ if firstCall then
 			local sets = require(loader:FindFirstChild('Settings'))
 			env.Data.Settings = sets;
 		else
-			warn("An error has occured while attempting to load AdminGUI Rewritten: The settings module is missing.");
+			warn(1,"The settings module is missing.");
 			return
 		end
 
@@ -258,9 +272,9 @@ if firstCall then
 		local settingsvalid = env.SettingsValidator(env.Data.Settings)
 		
 		if not settingsvalid and not savedsettings then
-			warn("Nano | Due to a settings error, your support attempt will be voided.\nPlease fix the above issues before contacting support if any issues indeed occur.")
+			warn(2,"Due to a settings error, your support attempt will be voided.\nPlease fix the above issues before contacting support if any issues indeed occur.")
 		elseif savedsettings and not settingsvalid then
-			warn("Nano | Your datastore key's settings are corrupted.\nPlease attempt to switch the datastore key before contacting support.")
+			warn(2,"Nano | Your datastore key's settings are corrupted.\nPlease attempt to switch the datastore key before contacting support.")
 		end
 
 		if loader:FindFirstChild("Functions") then
@@ -293,7 +307,7 @@ if firstCall then
 		env.Data.Commands = {}
 		local s = toCommands(loader:FindFirstChild("Commands"));
 		if not s then
-			warn("Nano | No commands were loaded. Attempting to fetch basic commands.")
+			warn("No commands were loaded. Attempting to fetch basic commands.")
 			env.Data.Commands = env.BaseCommands;
 		end
 

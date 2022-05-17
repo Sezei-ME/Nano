@@ -41,6 +41,6 @@ RunService.Heartbeat:Connect(function()
 
 		module.lastDeduction = tick()
 	end
-end) -- was missing the )
+end)
 
 return module

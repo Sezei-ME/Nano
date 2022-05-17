@@ -23,7 +23,7 @@ Additional contributors can be found within the code.
 ![Intro](https://doy2mn9upadnk.cloudfront.net/uploads/default/original/4X/0/7/a/07a2d9c8c244a93634836abebe8abb739fa388a0.gif)
 ![Message](https://doy2mn9upadnk.cloudfront.net/uploads/default/original/4X/f/d/9/fd9a324ac57f70ea6ae12d165dd3191322b27033.png)
 ### Certifications (cuz why not)
-![Current Build](https://img.shields.io/badge/Latest%20Build-41-ff7700) 
+![Current Build](https://img.shields.io/badge/Latest%20Build-42-ff7700) 
 ![Current Build](https://img.shields.io/badge/Latest%20Version-BETA%20PRE2-ff7700)
 
 ![Contains Very Delicious Spaghetti](https://img.shields.io/badge/Approved%20to%20Contain-Delicious%20Spaghetti-blue)
