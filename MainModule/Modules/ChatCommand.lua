@@ -44,7 +44,7 @@ local function FindPlayers(Runner,Name)
 end
 
 return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
-	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then
+	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then -- Chat has been used while it's disabled;
 		return;
 	end
 	local hasPerm = false
@@ -150,6 +150,29 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 						fields[field.Internal] = plrs
 					else
 						if field.Required then env.Notify(player,{"unsuccessful","No player has been found matching the name."}); return false; end
+						fields[field.Internal] = nil
+					end
+				elseif string.lower(field.Type) == "metaplayer" then
+					local plr = FindPlayers(player,v);
+					if plr and plr[1] then
+						fields[field.Internal] = env.MetaPlayer(env,plr[1]);
+					else
+						if field.Required then env.Notify(player,{"unsuccessful","No player has been found with a matching name."}) ;return false end
+						fields[field.Internal] = nil
+					end
+				elseif string.lower(field.Type) == "safemetaplayer" then
+					local plr = FindPlayers(player,v)[1] or nil;
+					if plr then
+						local othergroup = env.Ingame.Admins[plr.UserId].FlagGroup
+						if othergroup.Immunity < group.Immunity then
+							fields[field.Internal] = env.MetaPlayer(env,plr);
+						else
+							if field.Required then env.Notify(player,{"no_permission","You cannot target "..plr.Name.." due to them having a higher immunity level than yours."});return false end
+							env.Notify(player,{"hint","You cannot target "..plr.Name.." due to them having a higher immunity level than yours."})
+							fields[field.Internal] = nil
+						end
+					else
+						if field.Required then env.Notify(player,{"unsuccessful","No player has been found matching the name."});return false; end
 						fields[field.Internal] = nil
 					end
 				end

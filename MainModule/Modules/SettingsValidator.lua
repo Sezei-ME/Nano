@@ -37,6 +37,16 @@ return function(settings)
 		};
 	end
 	
+	if type(settings.AccentColor.Color) == "nil" then
+		table.insert(info,"'AccentColor' color value is missing; Setting to default");
+		settings.AccentColor.Color = Color3.new(0,0.666667,1);
+	end
+	
+	if type(settings.AccentColor.Forced) == "nil" then
+		table.insert(info,"'AccentColor' forced value is missing; Setting to default");
+		settings.AccentColor.Forced = false;
+	end
+	
 	if type(settings.ChatCommands) ~= "table" then
 		deprecation = true;
 		table.insert(info,"'ChatCommands' table is missing; Settings to default");
@@ -53,6 +63,11 @@ return function(settings)
 			warn(v);
 		end
 		warn("This does NOT require any immediate action as of now, since the SettingsValidator module fixes the table automatically, but a notification over it is necessary in-case the fix is not automatically applied.\nIf any issues occur, please simply replace the old settings module with a newer one, or report the issue to the Sezei.me team.\n------------")
+	elseif info[1] then
+		warn("Some errors have been found when the settings were validated; however, these might not be your fault. Please report the following message to the developers of Nano.\n\n");
+		for _,v in pairs(info) do
+			warn(v);
+		end
 	end
 	
 	info = nil; -- Clear from memory.

@@ -557,7 +557,7 @@ local function buildButtons(cmds) -- Build the UI button.
 
 					for k,field in pairs(cmd.Fields) do
 						local p;
-						if string.lower(field.Type) == "player" or string.lower(field.Type) == "safeplayer" or string.lower(field.Type) == "players" or string.lower(field.Type) == "safeplayers" then
+						if string.lower(field.Type) == "player" or string.lower(field.Type) == "safeplayer" or string.lower(field.Type) == "players" or string.lower(field.Type) == "safeplayers" or string.lower(field.Type) == "metaplayer" or string.lower(field.Type) == "safemetaplayer" then
 							--[[ -- Legacy Player
 							p = script.Assets.Player:Clone();
 							p.Name = k;
@@ -874,8 +874,10 @@ event.OnClientEvent:Connect(function(reason,detail)
 
 		local icon = require(script.Icons)(icon);
 		queueNotification(icon,message);
-	elseif reason == "RunClientFunction" then
-		getfenv()[detail[1]](detail[2],detail[3],detail[4],detail[5],detail[6]);
+	elseif reason == "Mute" then
+		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat,false);
+	elseif reason == "Unmute" then
+		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat,true);
 	end
 end)
 
@@ -1219,7 +1221,11 @@ end
 
 -- Generate the game settings.
 if remote:InvokeServer("HasPermission","Nano.GameSettings") then
-	local button = NanoWorks:NewAsset("Button",{Name = "Open Game Settings", Color = Color3.new(0,0.666667,1)});
+	local button = NanoWorks:NewAsset("Button",{Name = "Open Game Settings", Color = Assets.Intro.BackgroundColor3});
+	Assets.Intro:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+		button.self.BackgroundColor3 = Assets.Intro.BackgroundColor3;
+	end)
+	
 	button.self.Parent = s;
 	button.self.LayoutOrder = 1;
 	button.event:Connect(function()

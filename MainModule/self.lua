@@ -263,10 +263,17 @@ if firstCall then
 			env.Data.BaseSettings[k] = v;
 		end
 		
-		local savedsettings = env.Store():Load("Nano_Settings"):wait().Data
+		local savedsettings = env.Store():Load("Nano_Settings"):wait().Data or {}
+		
+		-- Settings that should be easily changable in the settings file;
+		savedsettings.AccentColor.Color = env.Data.BaseSettings.AccentColor.Color
+		savedsettings.FlagGroups = env.Data.BaseSettings.FlagGroups
+		-- end of those settings
 		
 		if savedsettings then
-			env.Data.Settings = savedsettings;
+			for k,v in pairs(savedsettings) do
+				env.Data.Settings[k] = v;
+			end
 		end
 		
 		local settingsvalid = env.SettingsValidator(env.Data.Settings)

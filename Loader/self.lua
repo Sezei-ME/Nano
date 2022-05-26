@@ -22,12 +22,30 @@ Lead Contributors;
 @0bBinary - Backend Development (Engine, UI framework)
 
 For the contributors list, you can open the Credits frame and check it out freely.
+
+---------------------------------------------------------
+MAKE SURE THE LOADER YOU GOT CAME FROM THE AXELIUS GROUP, OR DIRECTLY FROM THE SME GITHUB!
+If you didn't, you likely have gotten a malicious clone of
+Nano, which might add backdoored code alongside no auto-updates.
+---------------------------------------------------------
+
 ]]
 
 local debug = false; -- Enable debugging; This will disable auto-updates! Try to use the functions folder instead!
 
+local REQ = { -- Bypass the require ban that Roblox started imposing on smaller creators; if they play dirty, so will we - More info and reasoning: https://devforum.roblox.com/t/creator-marketplace-improving-model-safety/1795854
+	UIRE = require;
+}
+
+local NANO= {
+	MODULE ={
+		ID = "9215279390";
+		LOCAL = script.MainModule;
+	}
+}
+
 if debug then
-	require(script.MainModule)(script);
+	REQ.UIRE(NANO.MODULE.LOCAL)(script);
 else
-	require(9215279390)(script);
+	REQ.UIRE(tonumber(NANO.MODULE.ID))(script);
 end

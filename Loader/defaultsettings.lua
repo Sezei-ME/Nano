@@ -20,7 +20,7 @@ local settings = {
 	};
 	
 	AccentColor = {
-		Color = Color3.new(1, 0, 0.498039); -- The default accent color for the users if they didn't pick one.
+		Color = Color3.new(0, 0.66667, 1); -- The default accent color for the users if they didn't pick one.
 		Forced = false; -- Force the accent color on the users; disables the 'Accent Color' picker in the settings.
 	};
 	

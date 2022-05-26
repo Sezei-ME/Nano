@@ -1,7 +1,7 @@
 local TextService = game:GetService("TextService")
 local env = {
-	InternalBuild = "BETA_PRE2C4";
-	TrueBuild = 42; -- QA_BUILD[n]
+	InternalBuild = "BETA_PRE2C5";
+	TrueBuild = 43; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
 	Ingame = {Admins = {}; Bans = {}};
@@ -19,13 +19,16 @@ local env = {
 	Errors = {}; -- Collect the errors that occured. Available since QA_BUILD21
 }
 
+-- Legacy functions: Use env.MetaPlayer(plr)
 function env.Notify(player,data) env.Event:FireClient(player,"Notify",data) end
-function env.NotifyAll(data) env.Event:FireAllClients("Notify",data) end
 function env.Message(player,data) env.Event:FireClient(player,"Message",data) end
-function env.MessageAll(data) env.Event:FireAllClients("Message",data) end
-function env.Intro(player) env.Event:FireClient(player, "Intro") end
 function env.Hint(player,data) env.Event:FireClient(player,"Hint",data) end
+
+-- Standard functions
+function env.Intro(player) env.Event:FireClient(player, "Intro") end
 function env.HintAll(data) env.Event:FireAllClients("Hint",data) end
+function env.MessageAll(data) env.Event:FireAllClients("Message",data) end
+function env.NotifyAll(data) env.Event:FireAllClients("Notify",data) end
 function env.Build() return env.InternalBuild end
 function env.Store()
 	return env.Datastore(env.Data.Settings.Datastore,env,false)
