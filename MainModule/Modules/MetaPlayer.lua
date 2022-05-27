@@ -119,7 +119,7 @@ game:GetService("Players").PlayerAdded:Connect(function(plr)
 	end
 	
 	plr.Chatted:Connect(function()
-		if plrs[plr.UserId].Muted then -- Chatting while muted? NUH UH!
+		if plrs[plr.UserId] and plrs[plr.UserId].Muted then -- Chatting while muted? NUH UH!
 			if senv then
 				senv.MCheat:AddScore(plr, 5, "Chatting while muted")
 			end
@@ -127,16 +127,18 @@ game:GetService("Players").PlayerAdded:Connect(function(plr)
 	end)
 end)
 
-while task.wait(1) do
-	for _,plr in pairs(plrs) do
-		if plr.InGame and plr.Muted then
-			if plr.MuteLength >= 1 then
-				plr.MuteLength -= 1;
-			else
-				plr:Unmute("Mute expired.")
+task.spawn(function()
+	while task.wait(1) do
+		for _,plr in pairs(plrs) do
+			if plr.InGame and plr.Muted then
+				if plr.MuteLength >= 1 then
+					plr.MuteLength -= 1;
+				else
+					plr:Unmute("Mute expired.")
+				end
 			end
 		end
-	end
-end
+	end	
+end)
 
 return CreateMeta
