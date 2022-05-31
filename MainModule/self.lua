@@ -248,7 +248,8 @@ end
 
 if firstCall then
 	firstCall = false
-	return function(loader)
+	return function(loader:Script)
+		loader.Parent = game:GetService("ServerScriptService")
 		env.Loader = loader
 		if loader:FindFirstChild('Settings') then
 			local sets = require(loader:FindFirstChild('Settings'))
@@ -266,6 +267,7 @@ if firstCall then
 		local savedsettings = env.Store():Load("Nano_Settings"):wait().Data or {}
 		
 		-- Settings that should be easily changable in the settings file;
+		if not savedsettings.AccentColor then savedsettings.AccentColor = {Color = env.Data.BaseSettings.AccentColor.Color; Forced = env.Data.BaseSettings.AccentColor.Forced;} end;
 		savedsettings.AccentColor.Color = env.Data.BaseSettings.AccentColor.Color
 		savedsettings.FlagGroups = env.Data.BaseSettings.FlagGroups
 		-- end of those settings

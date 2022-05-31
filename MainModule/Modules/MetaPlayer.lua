@@ -27,9 +27,9 @@ local function CreateMeta(env:any, plr:Player?)
 		player.self:Kick(...);
 	end
 	
-	function player:Kill() -- Meta alias for Character.Humanoid.Health = 0;
-		if not player.InGame then return end;
-		player.self.Character.Humanoid.Health = 0;
+	function player:Kill() -- Meta alias for Character.Humanoid.Health = -100;
+		if not player.self then return end;
+		player.self.Character.Humanoid.Health = -100;
 	end
 	
 	function player:Respawn() -- Meta alias for LoadCharacter
@@ -39,9 +39,9 @@ local function CreateMeta(env:any, plr:Player?)
 	
 	function player:Refresh()
 		if not player.InGame then return end;
-		local pos = player.self.Character.HumanoidRootPart.Position;
+		local pos = player.self.Character.HumanoidRootPart.CFrame;
 		player.self:LoadCharacter();
-		player.self.Character:WaitForChild("HumanoidRootPart").Position = pos;
+		player.self.Character:WaitForChild("HumanoidRootPart").CFrame = pos;
 	end
 
 	function player:GetData()

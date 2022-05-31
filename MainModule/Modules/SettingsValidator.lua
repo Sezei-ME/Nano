@@ -38,12 +38,12 @@ return function(settings)
 	end
 	
 	if type(settings.AccentColor.Color) == "nil" then
-		table.insert(info,"'AccentColor' color value is missing; Setting to default");
+		-- Fix silently, for some reason it happens a lot and it's like.. roblox fault or smthn idek at this point.
 		settings.AccentColor.Color = Color3.new(0,0.666667,1);
 	end
 	
 	if type(settings.AccentColor.Forced) == "nil" then
-		table.insert(info,"'AccentColor' forced value is missing; Setting to default");
+		-- Same as above
 		settings.AccentColor.Forced = false;
 	end
 	

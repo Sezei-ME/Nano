@@ -1,6 +1,8 @@
 local remote = script.AdminGUI_Remote;
 local event = script.AdminGUI_Event;
 
+
+
 remote.Parent = game:GetService("ReplicatedStorage");
 event.Parent = game:GetService("ReplicatedStorage");
 
@@ -54,10 +56,12 @@ return function(api)
 		elseif key == "PingTest" then
 			return true
 		elseif key == "PingRes" then
-			api.playerPings[player.UserId] = reason
-			if tonumber(reason) and tonumber(reason) >= 500 then
-				api.MCheat.AddScore(player,1,"Abnormal Ping");
+			if tonumber(reason) and tonumber(reason) >= 600 then
+				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is consistantly higher than 600ms)");
+			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= 150 then
+				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping delta is higher than 150ms)");
 			end
+			api.playerPings[player.UserId] = reason
 			return true
 		elseif key == "GetSetting" then
 			return api.Data.Settings[reason];
@@ -96,6 +100,7 @@ return function(api)
 		elseif key == "SetGameSetting" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
 				local set = string.split(reason[1],".");
+				
 				api.Data.Settings[set[1]][set[2]] = reason[2];
 				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
 				api.Notify(player,{"bulb","You set \""..reason[1].."\" to "..tostring(reason[2])})
@@ -170,7 +175,7 @@ return function(api)
 				api.RemoteKeys[key](player,reason)
 			end)
 		else
-			api.MCheat.AddScore(player,5,"Unknown Remote Call Attempt");
+			api.MCheat:AddScore(player,5,"Attempt to call Nano event with an unknown identifier");
 		end
 	end
 end

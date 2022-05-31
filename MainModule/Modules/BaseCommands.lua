@@ -17,9 +17,9 @@ return {
 					Type = "String";
 				};
 			};
-			OnRun = function(player,fields,api)
+			OnRun = function(sender,fields,api)
 				for index, player in pairs(game.Players:GetPlayers()) do
-					player:Kick("\n\nModeration Message\n\nType: Shutdown\n\nMessage: \""..fields.reason.."\"\n\nBy: "..player.Name.."\n\n")
+					player:Kick("\n\nModeration Message\n\nType: Shutdown\n\nMessage: \""..fields.reason.."\"\n\nBy: "..sender.Name.."\n\n")
 				end
 			end;
 		}

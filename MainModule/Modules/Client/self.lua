@@ -9,6 +9,7 @@ local command = main.InCommand;
 local notification = script.Parent.Notification;
 local Assets = script.Assets;
 local players = game:GetService("Players");
+local localplayer = players.LocalPlayer;
 local mouse = players.LocalPlayer:GetMouse(); -- wew old tech :troll:
 local sendEvent;
 local resolveCache = {};
@@ -17,10 +18,12 @@ local MouseOverModule = require(script.HoverClient);
 local NanoWorks = require(script.NanoWorks);
 local SmothingModule = require(script.SLTT);
 local commandContributions = {};
-local UIS = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService");
 -- Get Remote
 local remote:RemoteFunction = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Remote");
 local event:RemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Event");
+
+script.Parent:WaitForChild("ErrorCodes") -- Await server detection of the client
 
 local Roblox = {
 	warn = warn;
@@ -28,7 +31,7 @@ local Roblox = {
 
 local function warn(code, ...)
 	if tonumber(code) then
-		Roblox.warn("Nano Client | Error "..code.." - "..require(script.ErrorCodes):ResolveCode(code).." | ",...)
+		Roblox.warn("Nano Client | Error "..code.." - "..require(script.Parent.ErrorCodes):ResolveCode(code).." | ",...)
 	else
 		Roblox.warn("Nano Client | ",...)
 	end
@@ -129,7 +132,11 @@ end
 
 local waitingforserver=true;
 task.spawn(function()
-	task.wait(5);
+	if game:GetService("RunService"):IsStudio() then
+		task.wait(7.5);
+	else
+		task.wait(3);
+	end
 
 	if waitingforserver == true then
 		warn(-1,"Nano will stay dormant until the server successfully wakes. It might take a while.")
@@ -260,8 +267,8 @@ end
 
 local contributions = {
 	-- [id] = {Contribution, Color3, AssetURL};
-	[253925749] = {"System Creator", Color3.new(1, 0.0588235, 0.466667),"http://www.roblox.com/asset/?id=6023426938"};
-	[1892103295] = {"System Creator", Color3.new(1, 0.333333, 1),"http://www.roblox.com/asset/?id=6023426938"};
+	[253925749] = {"System Creator\n(Backend)", Color3.new(1, 0.0588235, 0.466667),"http://www.roblox.com/asset/?id=6023426938"};
+	[1892103295] = {"System Creator\n(Frontend)", Color3.new(1, 0.333333, 1),"http://www.roblox.com/asset/?id=6023426938"};
 	[259773550] = {"Notable Feedback", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668946"};
 	[177424228] = {"Notable Feedback", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668946"};
 	[73885696] = {"S.ME Administrator\nContributor", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6022668911"};
@@ -394,12 +401,12 @@ end
 local function buildButtons(cmds) -- Build the UI button.
 	local commands_layout = {}
 	for _,v in pairs(scroll:GetChildren()) do
-		if v:IsA("TextButton") and v.Name ~= "_Template" and v.Name ~= "_Title" then -- Destroy every button that isn't the template.
+		if v:IsA("TextButton") then
 			v:Destroy();
 		end
 	end
 
-	local titl = scroll._Title:Clone();
+	local titl = Assets.CommandTitle:Clone();
 	local items = {}
 	titl.Name = "_Favourites";
 	titl.Text = "Starred Commands";
@@ -423,7 +430,7 @@ local function buildButtons(cmds) -- Build the UI button.
 	end
 	local highestOrder = 0;
 	for title, folder in pairs(folders) do -- For each folder; Build the title first, and then the commands.
-		local titl = scroll._Title:Clone();
+		local titl = Assets.CommandTitle:Clone();
 		local items = {}
 		titl.Name = "_"..title;
 		titl.Text = string.gsub(title,"_"," "); -- Replace all '_'s with spaces for good look.
@@ -450,33 +457,21 @@ local function buildButtons(cmds) -- Build the UI button.
 		end)
 		for k, cmd in pairs(folder) do -- For each command; Commands are built like this; {{commanddata}, "parentfolder"}
 			if cmd[1].InGui then -- Check if the command should be built in the UI in the first place. Usually disabled for debug commands only.
-				local btn = scroll._Template:Clone();
-				items[#items+1] = btn
-				btn.Name = k;
-				btn.LayoutOrder = highestOrder + string.byte(k);
-				btn:SetAttribute("Category", titl.Name)
+				
 				local parentfolder = cmd[2]; -- QoL; Get the parent folder.
 				local cmd = cmd[1]; -- QoL; No need to use cmd[1] everytime. Besides, we already got the parent folder.
-				btn.Text = cmd.Name;
-				if not cmd.Color then -- Make a random color if one is not provided.
-					cmd.Color = Color3.new(math.random(),math.random(),math.random());
-
-				end
-				if cmd.Description and cmd.Description.Short then
-					btn.HoverHint.Value = cmd.Description.Short;
-				end
-				btn.decoration.BackgroundColor3 = cmd.Color;
-				btn.decoration.Frame.BackgroundColor3 = cmd.Color;
-				btn.Parent = scroll;
-				btn.Visible = true;
+				local btn = NanoWorks:NewAsset("command",{Key = k; Text = cmd.Name; Category = titl.Name; Hint = cmd.Description and cmd.Description.Short or nil; Color = cmd.Color})
+				items[#items+1] = btn.self
+				btn.self.LayoutOrder = highestOrder + string.byte(k);
+				btn.self.Parent = scroll;
 				table.sort(folder, function(first, second)
 					return first.Name:lower() < second.Name:lower()
 				end)
 
-				if favs[btn.Name] then
-					btn.Starred.Image = "http://www.roblox.com/asset/?id=6031068423";
+				if favs[btn.self.Name] then
+					btn.self.Starred.Image = "http://www.roblox.com/asset/?id=6031068423";
 				else
-					btn.Starred.Image = "http://www.roblox.com/asset/?id=6031068425";
+					btn.self.Starred.Image = "http://www.roblox.com/asset/?id=6031068425";
 				end
 
 				if type(cmd.Credit) == "table" and cmd.Credit[1] then
@@ -504,28 +499,28 @@ local function buildButtons(cmds) -- Build the UI button.
 								building = building..", "..user.Username
 							end
 						end
-						btn:WaitForChild("Credit").Text = building
+						btn.self:WaitForChild("Credit").Text = building
 					else
-						btn:WaitForChild("Credit").Visible = false;
-						btn.TextSize += 2
+						btn.self:WaitForChild("Credit").Visible = false;
+						btn.self.TextSize += 2
 					end
 				end)
 
-				btn.Starred.MouseButton1Click:Connect(function()
+				btn.self.Starred.MouseButton1Click:Connect(function()
 					task.spawn(function()
-						remote:InvokeServer("updateFavs",btn.Name)
-						if favs[btn.Name] then
-							favs[btn.Name] = nil;
-							btn.Starred.Image = "http://www.roblox.com/asset/?id=6031068425";
+						remote:InvokeServer("updateFavs",btn.self.Name)
+						if favs[btn.self.Name] then
+							favs[btn.self.Name] = nil;
+							btn.self.Starred.Image = "http://www.roblox.com/asset/?id=6031068425";
 						else
-							favs[btn.Name] = true;
-							btn.Starred.Image = "http://www.roblox.com/asset/?id=6031068423";
+							favs[btn.self.Name] = true;
+							btn.self.Starred.Image = "http://www.roblox.com/asset/?id=6031068423";
 							main.Frame.Starred.Visible = true;
 						end
 					end)
 				end)
 
-				btn.MouseButton1Click:Connect(function()
+				btn.event:Connect(function()
 					command.Visible = true;
 					scroll.Visible = false;
 
@@ -559,7 +554,7 @@ local function buildButtons(cmds) -- Build the UI button.
 						local p;
 						if string.lower(field.Type) == "player" or string.lower(field.Type) == "safeplayer" or string.lower(field.Type) == "players" or string.lower(field.Type) == "safeplayers" or string.lower(field.Type) == "metaplayer" or string.lower(field.Type) == "safemetaplayer" then
 							--[[ -- Legacy Player
-							p = script.Assets.Player:Clone();
+							p = script.Assets.PlayerOLD:Clone();
 							p.Name = k;
 							p.Txt.Text = field.Text;
 							if field.Required then
@@ -568,74 +563,37 @@ local function buildButtons(cmds) -- Build the UI button.
 							p.Visible = true;
 							p.Parent = inn;
 							]]
-							p = script.Assets.Player_Dropdown:Clone();
-							p.Name = k;
-							p.Txt.Text = field.Text;
+							p = NanoWorks:NewAsset("PlayerDropdown",{Key = k; Text = field.Text;})
+							
 							if field.Required then
-								p.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text = p.self.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
 							end
-							p.TextButton.Text = game:GetService("Players").LocalPlayer.Name
-							p.Value.Value = game:GetService("Players").LocalPlayer.Name
-							local num = (#game:GetService("Players"):GetPlayers() * 20) - 2
-							for _,plr in pairs(game:GetService("Players"):GetPlayers()) do
-								local choice = p.TextButton.Dropdown.ScrollingFrame.Template:Clone();
-								choice.Parent = p.TextButton.Dropdown.ScrollingFrame
-								choice.Name = plr.Name;
-								if plr.DisplayName ~= plr.Name then
-									choice.Text = plr.DisplayName.." (@"..plr.Name..")";
-								else
-									choice.Text = "@"..plr.Name;
-								end
-								choice.Visible = true;
+							if localplayer.DisplayName ~= localplayer.Name then
+								p.self.TextButton.Text = localplayer.DisplayName.." (@"..localplayer.Name..")";
+							else
+								p.self.TextButton.Text = "@"..localplayer.Name;
 							end
-							p.TextButton.Dropdown.Size = UDim2.new(1,0,0,math.clamp(num,18,80))
-							p.TextButton.Dropdown.ScrollingFrame.CanvasSize = UDim2.new(0,0,0,num);
-							p.Visible = true;
-							p.Parent = inn;
+							p.self.Value.Value = localplayer.Name
+							p.self.TextButton.Text = game:GetService("Players").LocalPlayer.Name
+							p.self.Value.Value = game:GetService("Players").LocalPlayer.Name
+							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "description" and not cmd.Sendable then
-							p = script.Assets.Description:Clone();
-							p.Name = k;
-							p.Txt.Text = field.Text;
-							p.Visible = true;
-							p.Parent = inn;
+							p = NanoWorks:NewAsset("description",{Key = k;Text = field.Text;})
+							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "dropdown" then
-							p = script.Assets.CustomDropdown:Clone();
-							p.Name = k;
-							p.Txt.Text = field.Text;
+							p = NanoWorks:NewAsset("customdropdown",{Key = k, Text = field.Text; Default = field.Default; Options = field.Options})
 							if field.Required then
-								p.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
 							end
-							if field.Default then
-								p.Value.Value = field.Default;
-								p.TextButton.Text = field.Default;
-							end
-							local num = (#field.Options * 20) - 2
-							for _,ch in pairs(field.Options) do
-								local choice = p.TextButton.Dropdown.ScrollingFrame.Template:Clone();
-								choice.Parent = p.TextButton.Dropdown.ScrollingFrame
-								choice.Name = ch;
-								choice.Text = ch;
-								choice.Visible = true;
-							end
-							p.TextButton.Dropdown.Size = UDim2.new(1,0,0,math.clamp(num,18,80))
-							p.TextButton.Dropdown.ScrollingFrame.CanvasSize = UDim2.new(0,0,0,num);
-							p.Visible = true;
-							p.Parent = inn;
+							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "string" or string.lower(field.Type) == "number" then
-							p = script.Assets.Msg:Clone();
-							p.Name = k;
-							p.Txt.Text = field.Text;
+							p = NanoWorks:NewAsset(field.Type,{Key = k;Name = field.Text;Default = field.Default})
 							if field.Required then
-								p.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text = p.self.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
 							end
-							if field.Default then
-								p.Value.Value = field.Default;
-								p.TextBox.Text = field.Default;
-							end
-							p.TextBox.PlaceholderText = string.lower(field.Type);
-							p.Visible = true;
-							p.Parent = inn;
+							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "time" then
+							-- Exclude from framework: Probably won't be used in stuff that isn't commands.
 							p = script.Assets.Time:Clone();
 							p.Name = k;
 							p.Txt.Text = field.Text;
@@ -647,45 +605,21 @@ local function buildButtons(cmds) -- Build the UI button.
 							p.Visible = true;
 							p.Parent = inn;
 						elseif string.lower(field.Type) == "boolean" then
-							p = script.Assets.Boolean:Clone();
-							if field.Default then
-								p.Value.Value = true;
-								p.Btn.Image = "http://www.roblox.com/asset/?id=6031068421";
-							end
-							p.Name = k;
-							p.Txt.Text = field.Text;
+							p = NanoWorks:NewAsset("Boolean",{Key = k;Name = field.Text;Default = field.Default})
 							if field.Required then
-								p.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text = p.self.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
 							end
-							p.Visible = true;
-							p.Parent = inn;
+							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "color" then
-							p = script.Assets.Color:Clone();
-							p.Name = k;
-							p.Visible = true;
-							p.Txt.Text = field.Text;
-							p.Parent = inn;
+							p = NanoWorks:NewAsset("color",{Key = k;Name = field.Text;})
+							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "slider" then
-							p = script.Assets.Slider:Clone();
-							if field.Maximum then
-								p.Max.Value = field.Maximum;
-							else
-								p.Max.Value = 100;
-							end
-							if field.Minimum then
-								p.Min.Value = field.Minimum;
-								p.Value.Value = field.Minimum;
-								p.TextLabel.Text = tonumber(field.Minimum);
-							else
-								p.Min.Value = 0;
-							end
-							p.Name = k;
-							p.Visible = true;
-							p.Parent = inn;
+							p = NanoWorks:NewAsset("Slider",{Key = k; Name = field.Text; Minimum = field.Minimum or 0; Maximum = field.Maximum or 100})
+							p.self.Parent = inn;
 						end
 
-						if p then
-							p:SetAttribute("InternalKey",field.Internal)
+						if typeof(p.self) ~= "string" then
+							p.self:SetAttribute("InternalKey",field.Internal)
 							if field.Permission then
 								if not remote:InvokeServer("HasPermission",field.Permission) then
 									p.Visible = false;
@@ -693,7 +627,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							end
 						end
 
-						p:FindFirstChild("Value").Changed:Connect(function(newval)
+						p.self:FindFirstChild("Value").Changed:Connect(function(newval)
 							local receiveddata = remote:InvokeServer("CommandChangedValue",{cmd.Name,k,newval});
 						end)
 					end
@@ -1041,12 +975,24 @@ for uid,conts in pairs(commandContributions) do
 			inst.name.Text = resolveCache[uid] or game:GetService("Players"):GetNameFromUserIdAsync(uid);
 		end)
 	end
-	if t == "" then t = "Command Contributions: "..conts else t = t.."\n".."Command Contributions: "..conts end
+	if conts > 100 then
+		if t == "" then t = "Commands Hacker ("..conts..")" else t..="\nCommands Hacker ("..conts..")" end
+	elseif conts > 50 then
+		if t == "" then t = "Command Master ("..conts..")" else t..="\nCommand Master ("..conts..")" end
+	elseif conts > 25 then
+		if t == "" then t = "Command Developer ("..conts..")" else t..="\nCommand Developer ("..conts..")" end
+	elseif conts > 10 then -- Someone has been busy, huh? Wouldn't be fair to make it all in vain. (Rewards 'Command Maker' title in the credits section, unless they already have a title.)
+		if t == "" then t = "Command Maker ("..conts..")" else t..="\nCommand Maker ("..conts..")" end
+	else
+		if t == "" then t = "Command Contributions: "..conts else t..="\nCommand Contributions: "..conts end
+	end
 	inst.Creations.Text = t;
+	inst.Creations:GetPropertyChangedSignal("TextBounds"):Connect(function()
+		local y = inst.Creations.TextBounds.Y
+		inst.Size = UDim2.new(1,-8,0,math.max(50,y+27)) -- Size + 6 Pixel Spacing
+	end);	
 	inst.Image.Image = game:GetService("Players"):GetUserThumbnailAsync(uid,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size48x48);
-	inst.Visible = true;
-	local y = inst.Creations.TextBounds.Y
-	inst.Size = UDim2.new(1,-8,0,math.max(50,y+27)) -- Position + 6 Pixel Spacing
+	inst.Visible = true;	
 	InsertToC(C,inst);
 end
 
@@ -1111,23 +1057,15 @@ local lookingAtStarred = false
 main.Frame.Starred.MouseButton1Click:Connect(function()
 	lookingAtStarred = not lookingAtStarred
 	if lookingAtStarred then
-		for i,v in pairs(main.Scroll_Main:GetChildren()) do
+		for i,v in pairs(scroll:GetChildren()) do
 			if v:IsA"TextButton" then
-				if (favs[v.Name] or v.Name == "_Favourites") and v.Name ~= "_Title" and v.Name ~= "_Template" then
-					v.Visible = true
-				else
-					v.Visible = false
-				end
+				v.Visible = (favs[v.Name] or v.Name == "_Favourites") 
 			end
 		end
 	else
-		for i,v in pairs(main.Scroll_Main:GetChildren()) do
+		for i,v in pairs(scroll:GetChildren()) do
 			if v:IsA"TextButton" then
-				if v.Name ~= "_Title" and v.Name ~= "_Template" and v.Name ~= "_Favourites" then
-					v.Visible = true
-				elseif v.Name == "_Favourites" then
-					v.Visible = false
-				end
+				v.Visible = (v.Name ~= "_Favourites")
 			end
 		end
 	end
@@ -1261,12 +1199,20 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 				else
 					bubble.self:Destroy();
 					bubble = nil;
-					local asset = NanoWorks:NewAsset(type(setting),{Name = category,Default = setting});
+					local asset = nil;
+					if type(setting) ~= "userdata" then
+						asset = NanoWorks:NewAsset(type(setting),{Name = category,Default = setting});
+					elseif typeof(setting) ~= "Color3" then -- For some reason it won't accept Color3 in the server.
+						asset = NanoWorks:NewAsset(typeof(setting),{Name = category});
+					end
+					
 					if asset then
 						asset.self.Parent = parent;
 						asset.event:Connect(function(newval)
 							remote:InvokeServer("SetGameSetting",{prev..category,newval})
 						end)
+					elseif typeof(setting) == "Color3" then
+						
 					elseif type(setting) == "table" then
 						gameBubble(setting,prev..category..".",parent,stack+1);
 					end
