@@ -16,9 +16,10 @@ local resolveCache = {};
 local interactDebounce = false;
 local MouseOverModule = require(script.HoverClient);
 local NanoWorks = require(script.NanoWorks);
-local SmothingModule = require(script.SLTT);
+local TickerModule = require(script.SLTT);
 local commandContributions = {};
 local UIS = game:GetService("UserInputService");
+local inTargetMode = false; -- For player-targeting mode when clicking on the cursor
 -- Get Remote
 local remote:RemoteFunction = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Remote");
 local event:RemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Event");
@@ -63,6 +64,12 @@ local function playSound(soundId)
 	else
 		return false;
 	end
+end
+
+local function asyncFunc(func)
+	task.spawn(function()
+		func()
+	end)
 end
 
 local function runNotification(icon,message,sound)
@@ -143,13 +150,11 @@ task.spawn(function()
 		queueNotification("http://www.roblox.com/asset/?id=6031071057","Looks like the server is taking a while to respond. Nano can not run without the server, hence it will stay dormant.")
 	end
 end)
-
 local canUse,Build = remote:InvokeServer("CanUseUI")
-local inTargetMode = false; -- For player-targeting mode when clicking on the cursor
-local introstr = remote:InvokeServer("GetStrings",{"Intro_Top","Intro_Middle"}); -- Get the Intro_Top and Intro_Middle strings from the server.
-local serverAccentColor = remote:InvokeServer("GetSetting","AccentColor");
+local introstr = remote:InvokeServer("GetStrings",{"Intro_Top","Intro_Middle"});
 local favs = remote:InvokeServer("getFavs");
 local auth = remote:InvokeServer("IsAuthed");
+local serverAccentColor = remote:InvokeServer("GetSetting","AccentColor");
 waitingforserver = false
 if not serverAccentColor then
 	serverAccentColor = {
@@ -258,7 +263,7 @@ mfollow.Visible = false;
 task.spawn(function()
 	main.Version.Text = Build;
 	main.Version.TextTransparency = 1
-	SmothingModule:Smoothify("You are running NANO "..Build,main.Version,5)
+	TickerModule:Smoothify("You are running NANO "..Build,main.Version,5)
 end)
 
 if not canUse then
@@ -289,27 +294,29 @@ UIS.WindowFocusReleased:Connect(function()
 end)
 
 local function runIntro()
-	if script.Parent:FindFirstChild("Intro") then script.Parent["Intro"]:Destroy() end;
-	local asset = script.Assets:FindFirstChild("Intro"):Clone();
-	asset.Parent = script.Parent;
-	asset.Visible = true;
-	asset.Inner.Title.Text = introstr["Intro_Top"] or "Nano";
-	asset.Inner.Msg.Text = introstr["Intro_Middle"] or "Created by Sezei.Me and Axelius"
-	asset.Inner.Msg.Position = UDim2.new(0.503,0,0.67,0)
-	asset.Inner.EffectHolder.BG:TweenPosition(UDim2.new(-1,0,-1,0),"Out","Linear",10,true)
-	asset:TweenPosition(UDim2.new(1, -15,1, -45),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true,function()
-		asset:TweenPosition(UDim2.new(1,-15,1,-92),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,true);
-		asset.Inner:TweenSize(UDim2.fromOffset(300,80),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,true);
-		asset.Inner.Time:TweenSize(UDim2.new(0,0,0,4),Enum.EasingDirection.InOut,Enum.EasingStyle.Linear,math.clamp((#asset.Inner.Msg.Text / 10),5,20),true,function()
-			asset.Inner:TweenSize(UDim2.new(0,300,0,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true);
-			asset:TweenPosition(UDim2.new(1, -15,1, -45),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true);
-			task.wait(0.75);
-			asset:TweenPosition(UDim2.new(1.5,0,1,-45),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true,function()
-				task.wait(0.25);
-				asset:Destroy();
-			end);
-		end)
-	end);
+	task.spawn(function()
+		if script.Parent:FindFirstChild("Intro") then script.Parent["Intro"]:Destroy() end;
+		local asset = script.Assets:FindFirstChild("Intro"):Clone();
+		asset.Parent = script.Parent;
+		asset.Visible = true;
+		asset.Inner.Title.Text = introstr["Intro_Top"] or "Nano";
+		asset.Inner.Msg.Text = introstr["Intro_Middle"] or "Created by Sezei.Me and Axelius"
+		asset.Inner.Msg.Position = UDim2.new(0.503,0,0.67,0)
+		asset.Inner.EffectHolder.BG:TweenPosition(UDim2.new(-1,0,-1,0),"Out","Linear",10,true)
+		asset:TweenPosition(UDim2.new(1, -15,1, -45),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true,function()
+			asset:TweenPosition(UDim2.new(1,-15,1,-92),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,true);
+			asset.Inner:TweenSize(UDim2.fromOffset(300,80),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,true);
+			asset.Inner.Time:TweenSize(UDim2.new(0,0,0,4),Enum.EasingDirection.InOut,Enum.EasingStyle.Linear,math.clamp((#asset.Inner.Msg.Text / 10),5,20),true,function()
+				asset.Inner:TweenSize(UDim2.new(0,300,0,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true);
+				asset:TweenPosition(UDim2.new(1, -15,1, -45),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true);
+				task.wait(0.75);
+				asset:TweenPosition(UDim2.new(1.5,0,1,-45),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.7,true,function()
+					task.wait(0.25);
+					asset:Destroy();
+				end);
+			end)
+		end);
+	end)
 end
 
 local function runMessage(title,message,icon)
@@ -494,9 +501,9 @@ local function buildButtons(cmds) -- Build the UI button.
 							if pos == 1 then
 								building = "By "..user.Username
 							elseif pos == #users then
-								building = building.." and "..user.Username
+								building ..= " and "..user.Username
 							else
-								building = building..", "..user.Username
+								building ..= ", "..user.Username
 							end
 						end
 						btn.self:WaitForChild("Credit").Text = building
@@ -566,7 +573,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							p = NanoWorks:NewAsset("PlayerDropdown",{Key = k; Text = field.Text;})
 							
 							if field.Required then
-								p.self.Txt.Text = p.self.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text ..= "<font color=\"#ff2121\"><b>*</b></font>"
 							end
 							if localplayer.DisplayName ~= localplayer.Name then
 								p.self.TextButton.Text = localplayer.DisplayName.." (@"..localplayer.Name..")";
@@ -583,13 +590,13 @@ local function buildButtons(cmds) -- Build the UI button.
 						elseif string.lower(field.Type) == "dropdown" then
 							p = NanoWorks:NewAsset("customdropdown",{Key = k, Text = field.Text; Default = field.Default; Options = field.Options})
 							if field.Required then
-								p.self.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text ..= "<font color=\"#ff2121\"><b>*</b></font>"
 							end
 							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "string" or string.lower(field.Type) == "number" then
 							p = NanoWorks:NewAsset(field.Type,{Key = k;Name = field.Text;Default = field.Default})
 							if field.Required then
-								p.self.Txt.Text = p.self.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text ..= "<font color=\"#ff2121\"><b>*</b></font>"
 							end
 							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "time" then
@@ -598,7 +605,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							p.Name = k;
 							p.Txt.Text = field.Text;
 							if field.Required then
-								p.Txt.Text = p.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.Txt.Text ..= "<font color=\"#ff2121\"><b>*</b></font>"
 							end
 							p.TextBox.Text = "1";
 							p.Value.Value = "1";
@@ -607,7 +614,7 @@ local function buildButtons(cmds) -- Build the UI button.
 						elseif string.lower(field.Type) == "boolean" then
 							p = NanoWorks:NewAsset("Boolean",{Key = k;Name = field.Text;Default = field.Default})
 							if field.Required then
-								p.self.Txt.Text = p.self.Txt.Text.."<font color=\"#ff2121\"><b>*</b></font>"
+								p.self.Txt.Text ..= "<font color=\"#ff2121\"><b>*</b></font>"
 							end
 							p.self.Parent = inn;
 						elseif string.lower(field.Type) == "color" then
@@ -661,9 +668,9 @@ local function buildButtons(cmds) -- Build the UI button.
 						local strin = k
 						for key,val in pairs(readyfields) do
 							if key == 1 then
-								strin = strin.." "..val
+								strin ..= " "..val
 							else
-								strin = strin..sep..tostring(val)
+								strin ..= sep..tostring(val)
 							end
 						end
 						command.CommandSent.Visible = true
@@ -860,31 +867,23 @@ mouse.Move:Connect(function()
 		local pos2 = mouse.Target.Parent.HumanoidRootPart.Position
 		mfollow.Hover_3d.Text = " <b>"..mouse.Target.Parent.Name.. "</b>\nDistance: "..math.floor((pos1 - pos2).magnitude).." Studs"
 		if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent) then
-			-- rank cache; updates every 5 seconds so the ranks can be up-to-date.
-			-- cache template; Name = {playerdata,timetaken}
-			--[[ temporarily disabled due to stack issues
-			if not rankCache[mouse.Target.Name] then
-				rankCache[mouse.Target.Name] = {remote:InvokeServer("GetPlayerData",game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent)),os.time()};
-			else
-				local rC = rankCache[mouse.Target.Name];
-				if rC[2] >= os.time()+5 then
-					-- Act as if the cache is non-existant.
-					rankCache[mouse.Target.Name] = {remote:InvokeServer("GetPlayerData",game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent)),os.time()};
+			local p = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent)
+			if not rankCache[p.UserId] then rankCache[p.UserId] = remote:InvokeServer("GetPlayerDataFromId",p.UserId); end
+			local pdata = rankCache[p.UserId];
+			mfollow.Hover_3d.Text ..= "\nUserId: "..p.UserId
+				.. "\nGroup: "..pdata.FlagGroup.Key
+				.. "\nImmunity: "..pdata.FlagGroup.Immunity
+			if inTargetMode then
+				if pdata.FlagGroup.Immunity > 0 then
+					mfollow.Hover_3d.Text ..= "\n<font color=\"#ff9900\">Potentially Targetable</font>"
 				else
-					rankCache[mouse.Target.Name][2] = os.time(); -- force it to not update as long as the player stays focused on them
+					mfollow.Hover_3d.Text ..= "\n<font color=\"#00ff00\">Targetable</font>"
 				end
 			end
-			local fG = rankCache[mouse.Target.Name][1][1].FlagGroup
-			mfollow.Hover_3d.Text = mfollow.Hover_3d.Text.."\nGroup: "..fG.Key.."\nImmunity: "..fG.Immunity.."\nPing: "..rankCache[mouse.Target.Name][1][2].."ms"
-			]]
-			mfollow.Hover_3d.Text = mfollow.Hover_3d.Text.."\nUserId: "..game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent).UserId
-			if inTargetMode then
-				mfollow.Hover_3d.Text = mfollow.Hover_3d.Text.."\n<font color=\"#ff9900\">Targetable</font>"
-			end
 		else
-			mfollow.Hover_3d.Text = mfollow.Hover_3d.Text.."\n<font color=\"#ff2a2a\">Not a player</font>"
+			mfollow.Hover_3d.Text ..= "\n<font color=\"#ff2a2a\">Not a player</font>"
 			if inTargetMode then
-				mfollow.Hover_3d.Text = mfollow.Hover_3d.Text.."\n<font color=\"#ff2a2a\">Not Targetable</font>"
+				mfollow.Hover_3d.Text ..= "\n<font color=\"#ff2a2a\">Not Targetable</font>"
 			end
 		end
 		mfollow.Hover_3d.Visible = true;
@@ -938,9 +937,6 @@ end)
 if not auth then
 	main.AuthLock.Visible = true;
 end
-
-task.wait(1.5) -- Wait like 1.5 seconds for everything to finish, including the cache stuff.
--- hopefully the cache stuff's already done cuz if not it would be quite the issue .-.
 
 -- Build TopUI sections
 local function InsertToC(C:Instance,inst:Instance)
@@ -1328,30 +1324,32 @@ local res = math.floor(math.abs(tick() - starttick) * 1000)
 remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
 main.Ping.ms.Text = tostring(res).."ms"
 
-while task.wait(2) do -- PINGER
-	local starttick = tick();
-	local reply = remote:InvokeServer("PingTest")
-	local res = math.floor(math.abs(tick() - starttick) * 1000)
-	remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
-	main.Ping.ms.Text = tostring(res).."ms"
-	-- Get image by category; Low, Med, High or V.High
-	if res >= 500 then -- Critically High
-		main.Ping.Image = "rbxassetid://9189318676"
-		main.Ping.ImageColor3 = Color3.new(0.666667,0,0)
-	elseif res >= 350 then -- Very High
-		main.Ping.Image = "rbxassetid://9189318676"
-		main.Ping.ImageColor3 = Color3.new(1,0.266667,0.266667)
-	elseif res >= 200 then -- High
-		main.Ping.Image = "rbxassetid://9189319364"
-		main.Ping.ImageColor3 = Color3.new(1,0.666667,0.2)
-	elseif res >= 125 then -- Medium
-		main.Ping.Image = "rbxassetid://9189318742"
-		main.Ping.ImageColor3 = Color3.new(1,1,0.498039)
-	elseif res <= 50 then -- Very Low
-		main.Ping.Image = "rbxassetid://9189319213"
-		main.Ping.ImageColor3 = Color3.new(0.635294,1,0.909804)
-	else -- Low
-		main.Ping.Image = "rbxassetid://9189319213"
-		main.Ping.ImageColor3 = Color3.new(1,1,1)
+task.spawn(function()
+	while task.wait(2) do -- PINGER
+		local starttick = tick();
+		local reply = remote:InvokeServer("PingTest")
+		local res = math.floor(math.abs(tick() - starttick) * 1000)
+		remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
+		main.Ping.ms.Text = tostring(res).."ms"
+		-- Get image by category; Low, Med, High or V.High
+		if res >= 500 then -- Critically High
+			main.Ping.Image = "rbxassetid://9189318676"
+			main.Ping.ImageColor3 = Color3.new(0.666667,0,0)
+		elseif res >= 350 then -- Very High
+			main.Ping.Image = "rbxassetid://9189318676"
+			main.Ping.ImageColor3 = Color3.new(1,0.266667,0.266667)
+		elseif res >= 200 then -- High
+			main.Ping.Image = "rbxassetid://9189319364"
+			main.Ping.ImageColor3 = Color3.new(1,0.666667,0.2)
+		elseif res >= 125 then -- Medium
+			main.Ping.Image = "rbxassetid://9189318742"
+			main.Ping.ImageColor3 = Color3.new(1,1,0.498039)
+		elseif res <= 50 then -- Very Low
+			main.Ping.Image = "rbxassetid://9189319213"
+			main.Ping.ImageColor3 = Color3.new(0.635294,1,0.909804)
+		else -- Low
+			main.Ping.Image = "rbxassetid://9189319213"
+			main.Ping.ImageColor3 = Color3.new(1,1,1)
+		end
 	end
-end
+end)

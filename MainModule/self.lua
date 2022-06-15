@@ -263,23 +263,24 @@ if firstCall then
 		for k,v in pairs(env.Data.Settings) do
 			env.Data.BaseSettings[k] = v;
 		end
-		
+
 		local savedsettings = env.Store():Load("Nano_Settings"):wait().Data or {}
-		
+
 		-- Settings that should be easily changable in the settings file;
 		if not savedsettings.AccentColor then savedsettings.AccentColor = {Color = env.Data.BaseSettings.AccentColor.Color; Forced = env.Data.BaseSettings.AccentColor.Forced;} end;
 		savedsettings.AccentColor.Color = env.Data.BaseSettings.AccentColor.Color
 		savedsettings.FlagGroups = env.Data.BaseSettings.FlagGroups
+		savedsettings.Players = env.Data.BaseSettings.Players -- to be disabled as soon as the players category will work
 		-- end of those settings
-		
+
 		if savedsettings then
 			for k,v in pairs(savedsettings) do
 				env.Data.Settings[k] = v;
 			end
 		end
-		
+
 		local settingsvalid = env.SettingsValidator(env.Data.Settings)
-		
+
 		if not settingsvalid and not savedsettings then
 			warn(2,"Due to a settings error, your support attempt will be voided.\nPlease fix the above issues before contacting support if any issues indeed occur.")
 		elseif savedsettings and not settingsvalid then

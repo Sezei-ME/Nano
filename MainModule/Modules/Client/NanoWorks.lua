@@ -1,6 +1,9 @@
 -- It has been added mainly for beta 2 of Nano. Feel free to use it for your own stuff, i don't mind :ok_hand:
 
 local assets = script.Parent:FindFirstChild("Assets")
+local tweenservice = game:GetService("TweenService")
+local player = game:GetService("Players").LocalPlayer
+local mouse = player:GetMouse();
 
 local module = {}
 
@@ -11,6 +14,28 @@ local function isBright(color:Color3)
 	else
 		return false
 	end
+end
+
+local function GetMPos(GuiObject)
+	local uix, uiy = GuiObject.AbsoluteSize.X, GuiObject.AbsoluteSize.Y
+	local mx, my = math.clamp(mouse.X - GuiObject.AbsolutePosition.X, 0, uix), math.clamp(mouse.Y - GuiObject.AbsolutePosition.Y, 0, uiy)
+	return mx/uix, my/uiy
+end
+
+local function CircleAnim(GuiObject, EndColor:Color3, StartColor:Color3?)
+	local PX, PY = GetMPos(GuiObject)
+	local Circle:Frame = assets.Circle:Clone();
+	Circle.Size = UDim2.fromScale(0,0)
+	Circle.Position = UDim2.fromScale(PX,PY)
+	Circle.BackgroundColor3 = StartColor or GuiObject.BackgroundColor3
+	Circle.ZIndex = 200
+	Circle.Parent = GuiObject
+	local Size = GuiObject.AbsoluteSize.X
+	tweenservice:Create(Circle, TweenInfo.new(0.25), {Position = UDim2.fromScale(PX,PY) - UDim2.fromOffset(Size/2,Size/2), BackgroundTransparency = 1, BackgroundColor3 = EndColor, Size = UDim2.fromOffset(Size,Size)}):Play()
+	spawn(function()
+		task.wait(1)
+		Circle:Destroy()
+	end)
 end
 
 function module:FullClear(frame:Instance)
@@ -45,6 +70,9 @@ function module:NewAsset(typ,options)
 			end
 		end
 		asset.Visible = true;
+		asset.Btn.MouseButton1Click:Connect(function()
+			CircleAnim(asset.Btn,Color3.new(1,1,1));
+		end)
 		return {self = asset, event = asset.Btn.MouseButton1Click}
 	elseif string.lower(typ) == "command" then
 		local asset = assets.CommandButton:Clone()
@@ -97,11 +125,13 @@ function module:NewAsset(typ,options)
 		end
 		local num = (#options.Options * 20) - 2
 		for _,ch in pairs(options.Options) do
+			local TickerModule = require(script.Parent.SLTT)
 			local choice = asset.TextButton.Dropdown.ScrollingFrame.Template:Clone();
 			choice.Parent = asset.TextButton.Dropdown.ScrollingFrame
 			choice.Name = ch;
 			choice.Text = ch;
-			choice.Visible = true;
+			choice.Visible = true; print(choice.Parent)
+			if choice.Text:len() > 18 then choice.Text = string.sub(choice.Text,1,18) .. "..." end
 		end
 		asset.TextButton.Dropdown.Size = UDim2.new(1,0,0,math.clamp(num,18,80))
 		asset.TextButton.Dropdown.ScrollingFrame.CanvasSize = UDim2.new(0,0,0,num);

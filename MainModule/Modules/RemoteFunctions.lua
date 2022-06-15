@@ -48,18 +48,19 @@ return function(api)
 				api.Store():Save("favs_"..player.UserId,dat)
 			end)
 		elseif key == "GetPlayerData" then
-			local d = api.GetPlayerData(api,reason);
-			local x = {} 
-			x[1] = d
-			x[2] = api.playerPings[reason.UserId] or 0;
-			return x
+			return api.GetPlayerData(api,reason);
+		elseif key == "GetPlayerDataFromId" then
+			if game:GetService("Players"):GetPlayerByUserId(reason) then
+				return api.GetPlayerData(api,game:GetService("Players"):GetPlayerByUserId(reason));
+			end
+			return nil
 		elseif key == "PingTest" then
-			return true
+			return true;
 		elseif key == "PingRes" then
-			if tonumber(reason) and tonumber(reason) >= 600 then
-				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is consistantly higher than 600ms)");
-			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= 150 then
-				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping delta is higher than 150ms)");
+			if tonumber(reason) and tonumber(reason) >= (600 * (wait()/0.035) ) then
+				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is consistantly high)");
+			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= (150*(wait()/0.035)) then
+				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping delta is very high)");
 			end
 			api.playerPings[player.UserId] = reason
 			return true
