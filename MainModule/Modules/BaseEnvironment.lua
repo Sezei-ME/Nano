@@ -1,7 +1,7 @@
 local TextService = game:GetService("TextService")
 local env = {
-	InternalBuild = "BETA_PRE2C8";
-	TrueBuild = 47; -- QA_BUILD[n]
+	InternalBuild = "BETA_PRE2C9";
+	TrueBuild = 48; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
 	Ingame = {Admins = {}; Bans = {}};

@@ -83,7 +83,7 @@ local function runNotification(icon,message,sound)
 	notification.fill.Size = UDim2.new(1,0,1,0);
 	notification:TweenPosition(UDim2.new(0.5,0,1,-30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,false,function()
 		task.wait(0.07);
-		if sound and settings.Sounds[2] == true then
+		if sound and settings and settings.Sounds and settings.Sounds[2] == true then
 			playSound(sound)
 		end;
 		notification:TweenSize(UDim2.new(0,notification.Message.TextBounds.X+38,0,30),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.5,false,function()
@@ -625,23 +625,33 @@ local function buildButtons(cmds) -- Build the UI button.
 							p.self.Parent = inn;
 						end
 
-						if typeof(p.self) ~= "string" then
+						if p and typeof(p) ~= "Instance" and p.self and typeof(p.self) ~= "string" then
 							p.self:SetAttribute("InternalKey",field.Internal)
 							if field.Permission then
 								if not remote:InvokeServer("HasPermission",field.Permission) then
 									p.Visible = false;
 								end
 							end
+							
+							p.self:FindFirstChild("Value").Changed:Connect(function(newval)
+								bind:Fire("CommandChangedValue",remote:InvokeServer("CommandChangedValue",{cmd.Name,k,newval}));
+							end)
 						end
 
-						p.self:FindFirstChild("Value").Changed:Connect(function(newval)
-							local receiveddata = remote:InvokeServer("CommandChangedValue",{cmd.Name,k,newval});
-						end)
+						
 					end
 
 					local receiveddata = remote:InvokeServer("CommandOpened",cmd.Name);
-
+					
+					local pressed = false;
 					sendEvent = command.Send.MouseButton1Click:Connect(function()
+						if pressed then return end;
+						pressed = true
+						if remote:InvokeServer("HasPermission","Nano.NoDebounce") then
+							task.delay(0.25,function() -- Still needs to have some debounce anyways to avoid SOMEONE from spamming
+								pressed = false;
+							end);
+						end
 						if settings.Sounds[2] == true then
 							script.Sounds.SendingData:Play();
 						end
@@ -764,7 +774,9 @@ end
 command.Top.ImageButton.MouseButton1Click:Connect(function()
 	command.Visible = false;
 	scroll.Visible = true;
-	sendEvent:Disconnect();
+	if sendEvent then
+		sendEvent:Disconnect();
+	end
 end)
 
 local cmds = remote:InvokeServer("GetAvailableCommands");
@@ -871,8 +883,8 @@ mouse.Move:Connect(function()
 			if not rankCache[p.UserId] then rankCache[p.UserId] = remote:InvokeServer("GetPlayerDataFromId",p.UserId); end
 			local pdata = rankCache[p.UserId];
 			mfollow.Hover_3d.Text ..= "\nUserId: "..p.UserId
-				.. "\nGroup: "..pdata.FlagGroup.Key
-				.. "\nImmunity: "..pdata.FlagGroup.Immunity
+				.. "\nGroup: "..tostring(pdata.FlagGroup.Key)
+				.. "\nImmunity: "..tostring(pdata.FlagGroup.Immunity)
 			if inTargetMode then
 				if pdata.FlagGroup.Immunity > 0 then
 					mfollow.Hover_3d.Text ..= "\n<font color=\"#ff9900\">Potentially Targetable</font>"
@@ -896,6 +908,10 @@ local ev;
 bind.Event:Connect(function(event,inst)
 	if not canUse then return end
 	if event == "EnterTargeting" then
+		if inTargetMode then
+			queueNotification("http://www.roblox.com/asset/?id=6026568247","You already are in targeting mode!");
+			return
+		end
 		if settings.ShowTargetmodeHint[2] then
 			queueNotification("http://www.roblox.com/asset/?id=6026568247","You have entered Mouse Targeting mode!");
 		end

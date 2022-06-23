@@ -14,6 +14,16 @@ local function warn(code, ...)
 	end
 end
 
+local function format(originscript,replacementdata)
+	local s:string = tostring(originscript);
+	
+	for old,new in pairs(replacementdata) do
+		s = s:gsub("<"..old..">",tostring(new));
+	end
+	
+	return s;
+end
+
 for _,v in pairs(script:GetChildren()) do
 	if v:IsA("ModuleScript") then
 		mod = require(v)
@@ -34,15 +44,21 @@ env.playerPings = {}
 env.RemoteFunctions(env);
 
 function buildRankTable(p,info,key)
-	env.Ingame.Admins[p.UserId] = info;
+	env.Ingame.Admins[p.UserId] = {};
 	if type(info["FlagGroup"]) == 'table' then
-		env.Ingame.Admins[p.UserId].FlagGroup.Key = key
+		env.Ingame.Admins[p.UserId] = info
 		env.Ingame.Admins[p.UserId].Player = p
+		return
 	elseif type(info["FlagGroup"]) == 'string' then
-		env.Ingame.Admins[p.UserId].FlagGroup = env.Data.Settings.FlagGroups[info["FlagGroup"]]
-		env.Ingame.Admins[p.UserId].FlagGroup.Key = info["FlagGroup"]
-		env.Ingame.Admins[p.UserId].Player = p
+		if env.Data.Settings.FlagGroups[info.FlagGroup] then
+			env.Ingame.Admins[p.UserId].FlagGroup = env.Data.Settings.FlagGroups[info["FlagGroup"]]
+			env.Ingame.Admins[p.UserId].FlagGroup.Key = info["FlagGroup"] -- Should be the name
+			env.Ingame.Admins[p.UserId].Player = p
+			return
+		end
 	end
+	
+	warn(format("Invalid Data while building RankTable!\np var <p>\ninfo var <info>\nkey var <key>",{["p"] = p; ["info"] = info; ["key"] = key}))
 end
 
 function buildGroupTable(p,info,key)

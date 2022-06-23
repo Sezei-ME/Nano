@@ -17,19 +17,22 @@ return function(env,playerdata,permissionneeded)
 			return true;
 		else
 			local localperm = string.split(v,".");
-			local negative = (string.split(localperm,"")[1] == "-")
+			local negative = (localperm[1]:sub(1,1) == "-")
+			if negative then
+				localperm[1] = localperm[1]:sub(2);
+			end
 			if localperm[1] == permissionfolder[1] then
 				if localperm[2] == "*" then
-					if negative then return false end;
+					if negative then print("Negated "..v) return false end;
 					return true;
 				elseif localperm[2] == permissionfolder[2] then
 					if permissionfolder[3] then
 						if localperm[3] and localperm[3] == permissionfolder[3] or localperm[3] == "*" then
-							if negative then return false end;
+							if negative then print("Negated "..v) return false end;
 							return true;
 						end
 					else
-						if negative then return false end;
+						if negative then print("Negated "..v) return false end;
 						return true;
 					end
 				end

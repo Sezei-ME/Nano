@@ -31,7 +31,7 @@ local function CircleAnim(GuiObject, EndColor:Color3, StartColor:Color3?)
 	Circle.ZIndex = 200
 	Circle.Parent = GuiObject
 	local Size = GuiObject.AbsoluteSize.X
-	tweenservice:Create(Circle, TweenInfo.new(0.25), {Position = UDim2.fromScale(PX,PY) - UDim2.fromOffset(Size/2,Size/2), BackgroundTransparency = 1, BackgroundColor3 = EndColor, Size = UDim2.fromOffset(Size,Size)}):Play()
+	tweenservice:Create(Circle, TweenInfo.new(0.35), {Position = UDim2.fromScale(PX,PY) - UDim2.fromOffset(Size/2,Size/2), BackgroundTransparency = 1, BackgroundColor3 = EndColor, Size = UDim2.fromOffset(Size,Size)}):Play()
 	spawn(function()
 		task.wait(1)
 		Circle:Destroy()
@@ -83,6 +83,9 @@ function module:NewAsset(typ,options)
 		asset.decoration.BackgroundColor3 = options.Color or Color3.new(math.random(),math.random(),math.random());
 		asset.decoration.Frame.BackgroundColor3 = asset.decoration.BackgroundColor3;
 		asset.Visible = true;
+		asset.MouseButton1Down:Connect(function()
+			CircleAnim(asset,Color3.new(1,1,1),Color3.new(1,1,1));
+		end)
 		return {self = asset, event = asset.MouseButton1Click}
 	elseif string.lower(typ) == "message" or string.lower(typ) == "description" then
 		local asset = assets.Description:Clone()
@@ -101,8 +104,8 @@ function module:NewAsset(typ,options)
 		asset.Txt.Text = options.Text or options.Name;
 		local num = (#game:GetService("Players"):GetPlayers() * 20) - 2
 		for _,plr in pairs(game:GetService("Players"):GetPlayers()) do
-			local choice = asset.TextButton.Dropdown.ScrollingFrame.Template:Clone();
-			choice.Parent = asset.TextButton.Dropdown.ScrollingFrame;
+			local choice = asset.Dropdown.ScrollingFrame.Template:Clone();
+			choice.Parent = asset.Dropdown.ScrollingFrame;
 			choice.Name = plr.Name;
 			if plr.DisplayName ~= plr.Name then
 				choice.Text = plr.DisplayName.." (@"..plr.Name..")";
@@ -111,8 +114,8 @@ function module:NewAsset(typ,options)
 			end
 			choice.Visible = true;
 		end
-		asset.TextButton.Dropdown.Size = UDim2.new(1,0,0,math.clamp(num,18,80));
-		asset.TextButton.Dropdown.ScrollingFrame.CanvasSize = UDim2.new(0,0,0,num);
+		asset.Dropdown.Size = UDim2.new(1,-14,0,math.clamp(num,18,80));
+		asset.Dropdown.ScrollingFrame.CanvasSize = UDim2.new(0,0,0,num);
 		asset.Visible = true;
 		return {self = asset; event = asset.Value.Changed};
 	elseif string.lower(typ) == "customdropdown" then
@@ -240,6 +243,10 @@ function module:CreateBubble(name)
 	end
 	
 	return bubble
+end
+
+script.Parent.CircleAnim.OnInvoke = function(ui)
+	CircleAnim(ui,Color3.new(1,1,1));
 end
 
 return module

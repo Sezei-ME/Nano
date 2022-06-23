@@ -179,7 +179,16 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 			end
 		end
 		if env.CloudAPI.CheckAuth(player) then
-			return commanddata.OnRun(player,fields,env);
+			local success,result = pcall(function()
+				return commanddata.OnRun(player,fields,env);
+			end)
+			if success then
+				return result
+			else
+				warn("A script error has occured with a requested command: "..result);
+				env.MetaPlayer(player):Notify("script_error","An error has occured with the requested command: "..result);
+				return "Script Error";
+			end
 		else
 			return "Not Authenticated";
 		end

@@ -29,7 +29,7 @@ function SLTT:Smoothify(Text:string,UI:TextLabel,ScrollSpeed:number)
 		textlabel.Size = UDim2.new(0,textlabel.TextBounds.X,1,0)
 		UI.Text = ""
 		UI.ClipsDescendants = true
-		repeat
+		repeat 
 			textlabel.Position = UDim2.new(0,-((textlabel.TextBounds.X/2)-UI.AbsoluteSize.X),0,0)
 			textlabel:TweenPosition(UDim2.new(0,-(textlabel.TextBounds.X-UI.AbsoluteSize.X),0,0),"Out","Linear",ScrollSpeed)
 			task.wait(ScrollSpeed)
