@@ -6,6 +6,8 @@ function module:ResolveCode(code:number)
 		return "Server is taking too long to respond"
 	elseif code == -2 then
 		return "Unsupported client feature"
+	elseif code == -3 then
+		return "An error has occured while attempting to catch the fingerprint"
 		
 	-- Server
 	elseif code == 1 then

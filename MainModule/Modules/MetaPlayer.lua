@@ -22,21 +22,31 @@ local function CreateMeta(env:any, plr:Player?)
 	player.Muted = false;
 	player.MuteLength = 0;
 
+	env.Bind:Fire("MetaPlayerCreated",plr.UserId);
+
+	function player:HasPermission(permissionneeded)
+		return env.GetPlayerHasPermission(env,env.GetPlayerData(env,player.self),permissionneeded)
+	end
+
+	function player:GetFlagGroup()
+		return env.Ingame.Admins[player.UserId].FlagGroup
+	end
+
 	function player:Kick(...)
 		if not player.InGame then return end;
 		player.self:Kick(...);
 	end
-	
+
 	function player:Kill() -- Meta alias for Character.Humanoid.Health = -100;
 		if not player.self then return end;
 		player.self.Character.Humanoid.Health = -100;
 	end
-	
+
 	function player:Respawn() -- Meta alias for LoadCharacter
 		if not player.InGame then return end;
 		player.self:LoadCharacter();
 	end
-	
+
 	function player:Refresh()
 		if not player.InGame then return end;
 		local pos = player.self.Character.HumanoidRootPart.CFrame;
@@ -74,7 +84,7 @@ local function CreateMeta(env:any, plr:Player?)
 	function player.Data:Delete(key)
 		env.Store():Nullify(player.UserId.."_"..key):wait();
 	end
-	
+
 	function player:Mute(reason,length)
 		if not reason then reason = "[Unstated]" end;
 		if not length then length = 1800 end; -- 30 minutes mute by default
@@ -93,7 +103,7 @@ local function CreateMeta(env:any, plr:Player?)
 	end
 
 	table.insert(plrs,player);
-	
+
 	setmetatable(player,{__call = function()
 		return player.self
 	end})
@@ -112,12 +122,12 @@ game:GetService("Players").PlayerAdded:Connect(function(plr)
 	if plrs[plr.UserId] then
 		plrs[plr.UserId].InGame = true;
 		plrs[plr.UserId].self = plr; -- Player reconnected! Undo the nil
-		
+
 		if plrs[plr.UserId].Muted then
 			plrs[plr.UserId]:Mute("Previously disconnected while muted.",plrs[plr.UserId].MuteLength+120); -- Add 2 minutes of punishment for leaving while muted.
 		end
 	end
-	
+
 	plr.Chatted:Connect(function()
 		if plrs[plr.UserId] and plrs[plr.UserId].Muted then -- Chatting while muted? NUH UH!
 			if senv then

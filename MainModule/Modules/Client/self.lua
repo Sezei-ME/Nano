@@ -19,6 +19,7 @@ local NanoWorks = require(script.NanoWorks);
 local TickerModule = require(script.SLTT);
 local commandContributions = {};
 local UIS = game:GetService("UserInputService");
+local sendEvents = true;
 local inTargetMode = false; -- For player-targeting mode when clicking on the cursor
 -- Get Remote
 local remote:RemoteFunction = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Remote");
@@ -73,6 +74,7 @@ local function asyncFunc(func)
 end
 
 local function runNotification(icon,message,sound)
+	if not message then warn(-2,"Attempting to send an empty runNotification message.") return end
 	pcall(function() script.Parent.Queue.Inner:FindFirstChild("1"):Destroy(); end);
 	if not notificationsqueue[2] then
 		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
@@ -117,6 +119,12 @@ local function queueNotification(icon:string,message:string,sound:string?)
 		l.Visible = true;
 		l.Name = "1";
 		l.Image = icon;
+		l.MouseButton1Down:Connect(function()
+			script.CircleAnim:Invoke(l);
+		end)
+		l.MouseButton1Click:Connect(function()
+			table.remove(notificationsqueue,tonumber(l.Name));
+		end)
 		runNotification(icon,message,sound);
 	elseif notificationsqueue[1][3] == false then -- If for whatever reason the notifications queue's being held by the 1st instance.
 		table.insert(notificationsqueue,{icon,message,false,sound});
@@ -125,6 +133,12 @@ local function queueNotification(icon:string,message:string,sound:string?)
 		l.Visible = true;
 		l.Name = tostring(#notificationsqueue);
 		l.Image = icon;
+		l.MouseButton1Down:Connect(function()
+			script.CircleAnim:Invoke(l);
+		end)
+		l.MouseButton1Click:Connect(function()
+			table.remove(notificationsqueue,tonumber(l.Name));
+		end)
 		runNotification(notificationsqueue[1][1],notificationsqueue[1][2],notificationsqueue[1][4]);
 	else
 		table.insert(notificationsqueue,{icon,message,false,sound});
@@ -133,6 +147,12 @@ local function queueNotification(icon:string,message:string,sound:string?)
 		l.Visible = true;
 		l.Name = tostring(#notificationsqueue);
 		l.Image = icon;
+		l.MouseButton1Down:Connect(function()
+			script.CircleAnim:Invoke(l);
+		end)
+		l.MouseButton1Click:Connect(function()
+			table.remove(notificationsqueue,tonumber(l.Name));
+		end)
 		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
 	end
 end
@@ -280,7 +300,7 @@ local contributions = {
 	[173471724] = {"Thanks for everything.. :(\n(2002 - 2021)", Color3.new(0.623529, 0.572549, 1),"http://www.roblox.com/asset/?id=6023426974"};
 	[441169726] = {"QA Tester", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668880"};
 	[1094977] = {"Contributor", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668911"};
-	[711971214] = {"Notable Feedback", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668946"};
+	[711971214] = {"QA Tester", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668880"};
 	[153503346] = {"S.ME Administrator", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6035078889"};
 	[163986693] = {"S.ME Administrator\nContributor", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6022668911"};
 }
@@ -467,7 +487,7 @@ local function buildButtons(cmds) -- Build the UI button.
 				
 				local parentfolder = cmd[2]; -- QoL; Get the parent folder.
 				local cmd = cmd[1]; -- QoL; No need to use cmd[1] everytime. Besides, we already got the parent folder.
-				local btn = NanoWorks:NewAsset("command",{Key = k; Text = cmd.Name; Category = titl.Name; Hint = cmd.Description and cmd.Description.Short or nil; Color = cmd.Color})
+				local btn = NanoWorks:NewAsset("command",{Key = k; Text = string.gsub(cmd.Name,"_"," "); Category = titl.Name; Hint = cmd.Description and cmd.Description.Short or nil; Color = cmd.Color})
 				items[#items+1] = btn.self
 				btn.self.LayoutOrder = highestOrder + string.byte(k);
 				btn.self.Parent = scroll;
@@ -652,7 +672,7 @@ local function buildButtons(cmds) -- Build the UI button.
 								pressed = false;
 							end);
 						end
-						if settings.Sounds[2] == true then
+						if settings and settings.Sounds and settings.Sounds[2] == true then
 							script.Sounds.SendingData:Play();
 						end
 						local prefix,sep = remote:InvokeServer("GetSeparator");
@@ -699,7 +719,7 @@ local function buildButtons(cmds) -- Build the UI button.
 									times -= 1
 								until times == 0
 								command.CommandSent.TextLabel.Text = "Success!"
-								if settings.Sounds[2] == true then
+								if settings and settings.Sounds and settings.Sounds[2] == true then
 									script.Sounds.SendingData:Stop();
 									script.Sounds.DataSent:Play();
 								end
@@ -713,7 +733,7 @@ local function buildButtons(cmds) -- Build the UI button.
 									times -= 1
 								until times == 0
 								command.CommandSent.TextLabel.Text = "No status returned."
-								if settings.Sounds[2] == true then
+								if settings and settings.Sounds and settings.Sounds[2] == true then
 									script.Sounds.SendingData:Stop();
 									script.Sounds.DataSent:Play();
 								end
@@ -727,7 +747,7 @@ local function buildButtons(cmds) -- Build the UI button.
 									times -= 1
 								until times == 0
 								command.CommandSent.TextLabel.Text = "An error has occured!"
-								if settings.Sounds[2] == true then
+								if settings and settings.Sounds and settings.Sounds[2] == true then
 									script.Sounds.SendingData:Stop();
 									script.Sounds.DataSent:Play();
 								end
@@ -746,14 +766,8 @@ local function buildButtons(cmds) -- Build the UI button.
 								command.CommandSent.Nil.Visible = true
 							end
 						end)
-						local r;
-						local s,f = pcall(function()
-							r = remote:InvokeServer("SendCommand",strin)
-						end);
+						local r = remote:InvokeServer("SendCommand",strin)
 						done = {true,r};
-						if not s then
-							queueNotification("http://www.roblox.com/asset/?id=6022852107",f,"rbxassetid://7110770657")
-						end
 						task.wait(2.5)
 						command.Visible = false;
 						command.CommandSent.Visible = false
@@ -938,7 +952,7 @@ bind.Event:Connect(function(event,inst)
 			end
 		end)
 	elseif event == "ToggleInUse" then
-		uiInUse = not uiInUse
+		uiInUse = inst
 		mfollow.Visible = uiInUse;
 	elseif event == "SettingChanged" then -- {setting,value}
 		-- Settings structure: [name] = {isLocal, value}
@@ -962,7 +976,6 @@ end
 local C = main.TopUI.Credits
 
 -- Organise positions by contributions. (Command Contributions > System Contributions)
-
 -- Do the stuff for the already organised contributors
 for uid,conts in pairs(commandContributions) do
 	local inst = script.Assets.CreditTemplate:Clone();
@@ -1182,6 +1195,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 		script.Parent.Settings.Visible = true;
 	end)
 	local function settingsRefresh()
+		sendEvents = false;
 		local sets = remote:InvokeServer("GetGameSettings"); -- double check moment?
 		local plrs = remote:InvokeServer("GetSetting","Players"); -- oof
 		local mods,modsactive = remote:InvokeServer("GetModSettings");
@@ -1221,7 +1235,9 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					if asset then
 						asset.self.Parent = parent;
 						asset.event:Connect(function(newval)
-							remote:InvokeServer("SetGameSetting",{prev..category,newval})
+							if sendEvents then
+								remote:InvokeServer("SetGameSetting",{prev..category,newval})
+							end
 						end)
 					elseif typeof(setting) == "Color3" then
 						
@@ -1233,30 +1249,130 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 		end
 
 		local function permBubble(tbl,prev,parent,stack,name)
-		--[[
-		for category:string,setting:any in pairs(tbl) do
-			local bubble = NanoWorks:CreateBubble(category)
-			bubble.self.Parent = parent
-			bubble.self.Visible = true;
-			bubble.self.Outer.BackgroundColor3 = Color3.new(1-(stack*0.2),0.33333-(stack*0.06666),0);
-			if type(setting) == "table" then				
-				gameBubble(setting,prev..category.."."..category..".",bubble.self.Outer.Inner,stack+1,name);
-			else
-				bubble.self:Destroy();
-				bubble = nil;
-				local asset = NanoWorks:NewAsset(type(setting),{Name = category,Default = setting});
-				if asset then
-					asset.self.Parent = parent;
-					asset.event:Connect(function(newval)
-						remote:InvokeServer("SetGameSetting",{prev..category,newval})
+			NanoWorks:NewAsset("message",{Text = "Warning: Giving a '*' permission is dangerous! They can remove other's permissions too, regardless of immunity!",Color = Color3.new(1, 1, 0.498039)}).self.Parent = parent
+			local res = remote:InvokeServer("GetSetting","Players");
+			for k,v in pairs(res) do
+				local bubble = nil;
+				if v["UserId"] then
+					local s,f = pcall(function()
+						players:GetNameFromUserIdAsync(v.UserId);
 					end)
-				elseif type(setting) == "table" then
-					gameBubble(setting,prev..category..".",parent,stack+1);
+					if s then
+						bubble = NanoWorks:CreateBubble(players:GetNameFromUserIdAsync(v.UserId));
+					else
+						bubble = NanoWorks:CreateBubble(v.UserId);
+						bubble:AddAsset("message",{Text = "Failed to fetch name.",Color = Color3.new(1, 0.266667, 0.266667)})
+					end
+				elseif v["Name"] then
+					bubble = NanoWorks:CreateBubble(v.Name);
+				end
+				bubble.self.Name = k;
+				bubble.self.Parent = parent;
+				bubble.self.Visible = true;
+				
+				local vals = {
+					Chat = false;
+					UI = false;
+					Flags = "";
+					Key = "Non-Admin";
+					Immunity = 1; -- Considering they're here, it SHOULD be at least 1.
+				}
+				
+				if type(v.FlagGroup) == "table" then
+					for var,val in pairs(v.FlagGroup) do
+						vals[var] = val;
+					end
+					
+					local chatp = bubble:AddAsset("Boolean",{Key = "Chat", Name = "Can use the Chat for commands", Default = vals.Chat});
+					local uip = bubble:AddAsset("Boolean",{Key = "UI", Name = "Can use Nano's Panel", Default = vals.UI});
+					local flagsp = bubble:AddAsset("String",{Key = "Flags", Name = "Permissions / Flags", Default = vals.Flags});
+					local keyp = bubble:AddAsset("String",{Key = "Key", Name = "Custom Group Name", Default = vals.Key});
+					local immunityp = bubble:AddAsset("Number",{Key = "Immunity", Name = "Immunity Level (0 - 255)", Default = vals.Immunity});
+					local delete = bubble:AddAsset("Button",{Key = "Delete", Name = "Delete Administration Key", Color = Color3.new(1, 0.266667, 0.266667)})
+					
+					chatp.event:Connect(function(newval)
+						vals.Chat = newval
+						if sendEvents then
+							remote:InvokeServer("SetPlayerData",{tonumber(k),"Chat",newval})
+						end
+					end)
+					uip.event:Connect(function(newval)
+						vals.UI = newval
+						if sendEvents then
+							remote:InvokeServer("SetPlayerData",{tonumber(k),"UI",newval})
+						end
+					end)
+					flagsp.event:Connect(function(newval)
+						vals.Flags = newval
+						if sendEvents then
+							remote:InvokeServer("SetPlayerData",{tonumber(k),"Flags",newval})
+						end
+					end)
+					keyp.event:Connect(function(newval)
+						vals.Key = newval
+						if sendEvents then
+							remote:InvokeServer("SetPlayerData",{tonumber(k),"Key",newval})
+						end
+					end)
+					immunityp.event:Connect(function(newval)
+						vals.Immunity = newval
+						if sendEvents then
+							remote:InvokeServer("SetPlayerData",{tonumber(k),"Immunity",newval})
+						end
+					end)
+					delete.event:Connect(function()
+						if delete.self.Btn.Text == "Delete Administration Key" then
+							delete.self.Btn.Text = "Are you sure? Click again to delete."
+							task.spawn(function()
+								task.wait(3)
+								if delete.self.Btn.Text == "Are you sure? Click again to delete." then
+									delete.self.Btn.Text = "Delete Administration Key"
+								end
+							end)
+						elseif delete.self.Btn.Text == "Are you sure? Click again to delete." then
+							delete.self.Btn.Text = "Delete request sent. Refresh the settings."
+							remote:InvokeServer("DeletePlayerData",tonumber(k));
+						end
+					end)
+					
+				else
+					bubble:AddAsset("message",{Text = "User is in a set group! Changing groups is not yet supported.",Color = Color3.new(1, 1, 1)})
+					local delete = bubble:AddAsset("Button",{Key = "Delete", Name = "Delete Administration Key", Color = Color3.new(1, 0.266667, 0.266667)})
+					delete.event:Connect(function()
+						if delete.self.Btn.Text == "Delete Administration Key" then
+							delete.self.Btn.Text = "Are you sure? Click again to delete."
+							task.spawn(function()
+								task.wait(3)
+								if delete.self.Btn.Text == "Are you sure? Click again to delete." then
+									delete.self.Btn.Text = "Delete Administration Key"
+								end
+							end)
+						elseif delete.self.Btn.Text == "Are you sure? Click again to delete." then
+							delete.self.Btn.Text = "Delete request sent. Refresh the settings."
+							remote:InvokeServer("DeletePlayerData",tonumber(k));
+						end
+					end)
 				end
 			end
-		end
-		--]]
-			NanoWorks:NewAsset("message",{Text = "Unavailable!",Color = Color3.new(1, 0.25098, 0.25098)}).self.Parent = parent
+			
+			local bubble = NanoWorks:CreateBubble("Create New Key")
+			bubble.self.Name = "newmember";
+			bubble.self.Parent = parent;
+			bubble.self.Visible = true;
+			local useridf = bubble:AddAsset("String",{Key = "useridf", Name = "Player Identifier (Username | ID)"});
+			local btn = bubble:AddAsset("Button",{Key = "create",Name = "Click here to create the new key!", Color = Color3.new(1, 0.333333, 0)});
+			
+			local debounce = false;
+			btn.event:Connect(function()
+				if debounce then return end;
+				debounce = true;
+				task.spawn(function()
+					task.wait(10);
+					debounce = false;
+				end)
+				
+				remote:InvokeServer("NewPlayerData",useridf.self.Value.Value);
+			end)
 		end
 
 		local function modsBubble(tbl,prev,parent,stack,name)
@@ -1324,6 +1440,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 				script.Parent.Settings.InnerHolder.Categories.Mods.BackgroundColor3 = Color3.fromRGB(255,85,0);
 			end)
 		end
+		sendEvents = true;
 	end
 
 	settingsRefresh();
@@ -1342,13 +1459,15 @@ main.Ping.ms.Text = tostring(res).."ms"
 
 task.spawn(function()
 	while task.wait(2) do -- PINGER
-		local starttick = tick();
-		local reply = remote:InvokeServer("PingTest")
-		local res = math.floor(math.abs(tick() - starttick) * 1000)
+		local starttick = os.clock();
+		local reply = remote:InvokeServer("PingTest");
+		local res = math.floor(math.abs(os.clock() - starttick) * 1000)
 		remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
 		main.Ping.ms.Text = tostring(res).."ms"
 		-- Get image by category; Low, Med, High or V.High
-		if res >= 500 then -- Critically High
+		if res >= 1000 then
+			main.Ping.ms.Text = ">999ms"
+		elseif res >= 500 then -- Critically High
 			main.Ping.Image = "rbxassetid://9189318676"
 			main.Ping.ImageColor3 = Color3.new(0.666667,0,0)
 		elseif res >= 350 then -- Very High

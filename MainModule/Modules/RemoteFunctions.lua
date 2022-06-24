@@ -1,15 +1,35 @@
+local env = nil;
 local remote = script.AdminGUI_Remote;
 local event = script.AdminGUI_Event;
-
+local pingchecks = {};
 
 
 remote.Parent = game:GetService("ReplicatedStorage");
 event.Parent = game:GetService("ReplicatedStorage");
 
+task.spawn(function()
+	while task.wait(10) do
+		if env then
+			for k,v in pairs(pingchecks) do
+				local p = game:GetService("Players"):GetPlayerByUserId(k)
+				if p then
+					if v+30 < os.time() then
+						env.MCheat:AddScore(p,5,"Unstable connection to the Server (Non-cooperative Client)");
+						pingchecks[k] = os.time();
+					end
+				end
+			end
+		end
+	end
+end)
+
 return function(api)
+	if not env then env = api end;
 	api.Remote = remote;
 	api.Event = event;
 	remote.OnServerInvoke = function(player,key,reason)
+		api.Bind:Fire("FunctionFired",player,key,reason);
+		
 		if key == "CanUseUI" then
 			return api.GetPlayerHasPermission(api,api.Ingame.Admins[player.UserId],"UI"), api.Build();
 		elseif key == "GetSeparator" then
@@ -57,11 +77,22 @@ return function(api)
 		elseif key == "PingTest" then
 			return true;
 		elseif key == "PingRes" then
-			if tonumber(reason) and tonumber(reason) >= (600 * (wait()/0.035) ) then
-				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is consistantly high)");
-			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= (150*(wait()/0.035)) then
-				api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping delta is very high)");
+			pingchecks[player.UserId] = os.time();
+			if tonumber(reason) and tonumber(reason) >= (math.clamp(1000*(wait()/0.035),1000,1750)) then
+				if api.MCheat then
+					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is consistantly high)");
+				end
+			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= (math.clamp(350*(wait()/0.035),350,700)) then
+				if api.MCheat then
+					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping delta is very high)");
+				end
 			end
+			
+			if api.MCheat and api.MCheat.Storage and api.MCheat.Storage[player.UserId] and api.MCheat.Storage[player.UserId][1] >= 10 and not api.MCheat.Storage[player.UserId].Notified then
+				api.MCheat.Storage[player.UserId].Notified = true;
+				api.MetaPlayer(api,player):Notify({"bulb","Your connection to the server is unstable. This might get you kicked!"})
+			end
+			
 			api.playerPings[player.UserId] = reason
 			return true
 		elseif key == "GetSetting" then
@@ -101,11 +132,38 @@ return function(api)
 		elseif key == "SetGameSetting" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
 				local set = string.split(reason[1],".");
-				
 				api.Data.Settings[set[1]][set[2]] = reason[2];
 				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
-				api.Notify(player,{"bulb","You set \""..reason[1].."\" to "..tostring(reason[2])})
+				api.MetaPlayer(api,player):Notify({"bulb","You set \""..reason[1].."\" to "..tostring(reason[2])})
 				return -- return after the save
+			end
+		elseif key == "SetPlayerData" then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+				local plruserid = (api.Data.Settings.Players[reason[1]] and (api.Data.Settings.Players[reason[1]].UserId or api.Data.Settings.Players[reason[1]].Name and game:GetService("Players"):GetUserIdFromNameAsync(api.Data.Settings.Players[reason[1]].Name)))
+				if not plruserid then plruserid = 0 end;
+				api.Data.Settings.Players[reason[1]].FlagGroup[reason[2]] = reason[3];
+				if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
+					env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.Players[reason[1]].FlagGroup
+				end
+				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+				api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s \""..reason[2].."\" variable to "..reason[3]});
+				return -- return after the save for quicker thing
+			end
+		elseif key == "NewPlayerData" then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+				local plruserid = tonumber(reason) or game:GetService("Players"):GetUserIdFromNameAsync(reason)
+				if not plruserid then api.MetaPlayer(api,player):Notify({"bulboff","New key creation for "..plruserid.." has failed."}); return false end;
+				table.insert(api.Data.Settings.Players,{UserId = plruserid; FlagGroup = {Key = "Newbie"; Immunity = 1; Flags = "Moderation.Respawn"; UI = true; Chat = true}});
+				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+				api.MetaPlayer(api,player):Notify({"bulb","You created a new key for "..plruserid..". Refresh the settings to edit the new team member."});
+				return -- return after the save for quicker thing
+			end
+		elseif key == "DeletePlayerData" then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+				table.remove(api.Data.Settings.Players,reason);
+				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+				api.MetaPlayer(api,player):Notify({"bulb","Key "..reason.." has been removed from the system's storage. Refresh the settings to see the change."});
+				return -- return after the save for quicker thing
 			end
 		elseif key == "IsAuthed" then
 			return api.CloudAPI.CheckAuth(player);
@@ -113,7 +171,6 @@ return function(api)
 			local command = string.split(reason," ")[1]
 			if api.Data.Commands[command] then
 				-- UI, Player, Command, Args
-				api.Bind:Fire("CommandFired",true,player,command,reason);
 				local dat = api.ChatCommand(api,player,api.Ingame.Admins[player.UserId],api.Data.Commands[command],reason,true);
 				if dat then
 					return dat;

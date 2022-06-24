@@ -198,6 +198,10 @@ function module:NewAsset(typ,options)
 		else
 			asset.Min.Value = 0;
 		end
+		if options.Default then
+			asset.Value.Value = options.Default;
+			asset.TextLabel.Text = tonumber(options.Default);
+		end
 		asset.Visible = true;
 		return {self = asset; event = asset.Value.Changed}
 	else
@@ -227,7 +231,7 @@ function module:CreateBubble(name)
 	end
 	function bubble:AddAsset(typ,options)
 		local asset = module:NewAsset(typ,options);
-		bubble:Insert(asset);
+		asset.self.Parent = bubble.self.Outer.Inner
 		asset.self.Visible = true;
 		return asset
 	end

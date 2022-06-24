@@ -111,11 +111,15 @@ function handleJoin(p)
 			local moderator = baninfo[4];
 
 			if bantime == math.huge then
+				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+				
 				p:Kick("You are server-banned for \""..banreason.."\". This ban is active until the server will shutdown.");
 				return;
 			end
 
 			if os.time() <= origintime + bantime then
+				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+				
 				p:Kick("You are server-banned for \""..banreason.."\". Estimated time left: ".. tostring( math.abs( os.time() - (origintime + bantime) ) / 60 ) .." minutes." );
 				return;
 			end
@@ -129,11 +133,15 @@ function handleJoin(p)
 			local moderator = baninfo[4];
 
 			if bantime == math.huge then
+				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+				
 				p:Kick("You are game-banned for \""..banreason.."\". This ban is permanent.");
 				return;
 			end
 
 			if os.time() <= math.abs(origintime + bantime) then
+				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+				
 				p:Kick("You are game-banned for \""..banreason.."\". Estimated time left: ".. tostring( math.abs( os.time() - (origintime + bantime) ) / 60 ) .." minutes." );
 				return;
 			end
@@ -145,6 +153,7 @@ function handleJoin(p)
 				if dat then
 					if dat.success then
 						if dat.active and dat.active == true then
+							env.Bind:Fire("JoinWhileBanned",p.UserId,dat.reason);
 							p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..dat.reason)
 						else
 							task.spawn(function()
@@ -154,6 +163,7 @@ function handleJoin(p)
 									ndat:Cancel();
 									ndat = ndat.Data;
 									if ndat and ndat.success and ndat.active and ndat.active == true then
+										env.Bind:Fire("JoinWhileBanned",p.UserId,ndat.reason);
 										p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..ndat.reason)
 										return
 									end
@@ -169,6 +179,7 @@ function handleJoin(p)
 
 		if env.Data.Gamelocked then
 			if env.Data.Gamelocked[1] == true then
+				env.Bind:Fire("JoinWhileBanned",p.UserId,"Server is locked");
 				p:Kick(env.Data.Gamelocked[2]);
 			end
 		end
@@ -260,6 +271,7 @@ function handleJoin(p)
 	p.Chatted:Connect(function(msg)
 		handleMsg(msg);
 	end)
+	env.Bind:Fire("SuccessfulJoin",p.UserId);
 end
 
 if firstCall then
@@ -284,9 +296,10 @@ if firstCall then
 
 		-- Settings that should be easily changable in the settings file;
 		if not savedsettings.AccentColor then savedsettings.AccentColor = {Color = env.Data.BaseSettings.AccentColor.Color; Forced = env.Data.BaseSettings.AccentColor.Forced;} end;
+		savedsettings.CloudAPI = env.Data.BaseSettings.CloudAPI
 		savedsettings.AccentColor.Color = env.Data.BaseSettings.AccentColor.Color
 		savedsettings.FlagGroups = env.Data.BaseSettings.FlagGroups
-		savedsettings.Players = env.Data.BaseSettings.Players -- to be disabled as soon as the players category will work
+		--savedsettings.Players = env.Data.BaseSettings.Players -- disabled because players category working :troll:
 		-- end of those settings
 
 		if savedsettings then
@@ -345,8 +358,10 @@ if firstCall then
 		game:GetService("Players").PlayerRemoving:Connect(function(p)
 			env.Ingame.Admins[p.UserId] = nil;
 		end)
+		env.Bind:Fire("NanoLoaded");
 	end
 else
+	env.Bind:Fire("LoadAttempt");
 	return -- Return nothing, but don't init the admin again either.
 
 		-- If you want to return the environment, or literally anything else, you will need to fork the module; I do not allow this with a "vanilla"

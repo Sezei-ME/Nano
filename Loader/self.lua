@@ -37,8 +37,8 @@ local REQ = { -- Bypass the require ban that Roblox started imposing on smaller 
 	UIRE = require;
 }
 
-local NANO= {
-	MODULE ={
+local NANO = {
+	MODULE = {
 		ID = "9215279390";
 		LOCAL = script.MainModule;
 	}

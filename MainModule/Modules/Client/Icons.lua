@@ -1,4 +1,5 @@
 return function(icon)
+	if not icon then return "http://www.roblox.com/asset/?id=0" end;
 	if string.lower(icon) == "success" or string.lower(icon) == "done" then
 		return "http://www.roblox.com/asset/?id=6023426945";
 	elseif string.lower(icon) == "unsuccessful" or string.lower(icon) == "failed" then
@@ -17,6 +18,14 @@ return function(icon)
 		return "http://www.roblox.com/asset/?id=6023426923";
 	elseif string.lower(icon) == "hint" or string.lower(icon) == "bulb" then
 		return "http://www.roblox.com/asset/?id=6026568247";
+	elseif string.lower(icon) == "bulboff" then
+		return "http://www.roblox.com/asset/?id=6026568254"
+	elseif string.lower(icon) == "star" then
+		return "http://www.roblox.com/asset/?id=6026568189"
+	elseif string.lower(icon) == "problem" then
+		return "http://www.roblox.com/asset/?id=6031086176"
+	elseif string.lower(icon) == "celebration" then
+		return "http://www.roblox.com/asset/?id=6034767613"
 	else
 		return icon;
 	end

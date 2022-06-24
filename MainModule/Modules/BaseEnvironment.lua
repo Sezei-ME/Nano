@@ -1,7 +1,7 @@
 local TextService = game:GetService("TextService")
 local env = {
-	InternalBuild = "BETA_PRE2C9";
-	TrueBuild = 48; -- QA_BUILD[n]
+	InternalBuild = "BETA_PRE2C10";
+	TrueBuild = 49; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
 	Ingame = {Admins = {}; Bans = {}};
@@ -19,7 +19,7 @@ local env = {
 	Errors = {}; -- Collect the errors that occured. Available since QA_BUILD21
 }
 
--- Legacy functions: Use env.MetaPlayer(plr)
+-- Legacy functions: Use env.MetaPlayer(env, plr)
 function env.Notify(player,data) env.Event:FireClient(player,"Notify",data) end
 function env.Message(player,data) env.Event:FireClient(player,"Message",data) end
 function env.Hint(player,data) env.Event:FireClient(player,"Hint",data) end

@@ -1,6 +1,6 @@
 local t = {events = {},strict = false}
 
-function t:New(name,funct)
+function t:New(name,funct,event) -- event is optional. do it if you have errors with the errors below.
 	local ev = {};
 	
 	if t.events[name] then
@@ -20,7 +20,7 @@ function t:New(name,funct)
 		t.events[name] = nil;
 	end
 	
-	t.events[name] = funct;
+	t.events[name] = {funct,event};
 	
 	return ev;
 end
@@ -29,7 +29,13 @@ function t._NanoWrapper(api)
 	local event:BindableEvent = api.Bind
 	event.Event:Connect(function(name,...)
 		if t.events[name] then
-			t.events[name](...);
+			t.events[name][1](...);
+		end
+		
+		for _,fired in pairs(t.events) do
+			if fired[2] == name then
+				fired[1]()
+			end
 		end
 	end)
 	

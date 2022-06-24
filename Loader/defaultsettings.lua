@@ -1,3 +1,6 @@
+-- Note that most of the stuff here will be only editable using the in-game 'Game Settings' panel after the first
+-- boot. The exceptions are; CloudAPI, AccentColor.Color and FlagGroups
+
 local settings = {
 	Datastore = "NanoAdmin";
 	
@@ -20,14 +23,14 @@ local settings = {
 	};
 	
 	AccentColor = {
-		Color = Color3.new(0, 0.66667, 1); -- The default accent color for the users if they didn't pick one.
+		Color = Color3.new(0, 0.666667, 1); -- The default accent color for the users if they didn't pick one.
 		Forced = false; -- Force the accent color on the users; disables the 'Accent Color' picker in the settings.
 	};
 	
 	FlagGroups = {
 		-- ["Name"] = {Immunity = Num; Flags = FlagList};
 		["Game Owner"] = {Immunity = 90; Flags = "*"; UI = true; Chat = true};
-		["Owner"] = {Immunity = 80; Flags = "*"; UI = true; Chat = true};
+		["Owner"] = {Immunity = 80; Flags = "-Nano.NoDebounce;*"; UI = true; Chat = true};
 		["Admin"] = {Immunity = 50; Flags = "Moderation.*;Utility.*;Fun.*"; UI = true; Chat = true};
 		["Moderator"] = {Immunity = 20; Flags = "Moderation.*"; UI = true; Chat = true};
 		["Minimod"] = {Immunity = 10; Flags = "Moderation.Respawn"; UI = true; Chat = false};

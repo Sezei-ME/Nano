@@ -51,6 +51,56 @@ function module:CheckBodyPart(part)
 	end
 end
 
+function module:GetHead(plr) print"got head"
+	if plr and plr.Character then
+		local head = plr.Character:FindFirstChild("Head")
+		return head
+	end
+end
+
+function module:GetName(plr) print"got name"
+	for a,b in pairs(plr.Character:GetChildren()) do
+		if b:IsA("Model") and b:FindFirstChild("FakeHumanoid") then
+			return b
+		end
+	end
+end
+
+function module:SetName(plr, name) print"rawr"
+	local head = module:GetHead(plr)
+	if head then
+		local fakename = module:GetName(plr)
+		if not fakename then
+			fakename = Instance.new("Model")
+			local fakeHead = head:Clone()
+			fakeHead.Name = "Head"
+			fakeHead.Parent = fakename
+			fakeHead.face.Transparency = 1
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = fakeHead
+			weld.Part1 = head
+			weld.Parent = fakeHead
+			local fakeHumanoid = Instance.new("Humanoid")
+			fakeHumanoid.Name = "FakeHumanoid"
+			fakeHumanoid.Parent = fakename
+			fakename.Parent = plr.Character
+			head.Transparency = 1
+		end
+		if name then
+			fakename.Name = name
+		end
+	end
+end
+
+function module:ResetName(plr)
+	local head = module:GetHead(plr)
+	local fakename = module:GetName(plr)
+	if head and fakename then
+		fakename:Destroy()
+		head.Transparency = 0
+	end
+end
+
 function module:CreateClone(character)
 	local humanoid = character:FindFirstChild("Humanoid")
 	if humanoid then
@@ -59,7 +109,7 @@ function module:CreateClone(character)
 		character.Archivable = true
 		local clone = character:Clone()
 		local cloneHumanoid = clone.Humanoid
-		clone.Name = character.Name.."'s HDAdminClone"
+		clone.Name = character.Name.."'s NANOClone"
 		local specialChar = false
 		if clone:FindFirstChild("Chest") then
 			specialChar = true
@@ -123,7 +173,7 @@ function module:SetTransparency(model, value, force)
 			elseif not fakeParts or model:FindFirstChild(b.Name.."Fake") == nil then
 				b.Transparency = value
 			end
-		elseif (b:IsA("ParticleEmitter") and b.Name == "BodyEffect") or b:IsA("PointLight") then
+		elseif (b:IsA("ParticleEmitter") and b.Name == "BodyEffect") or b:IsA("PointLight") or b:IsA("BillboardGui") then
 			if value == 1 then
 				b.Enabled = false
 			elseif value == 0 then

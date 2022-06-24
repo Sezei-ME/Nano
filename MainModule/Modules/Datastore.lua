@@ -81,7 +81,7 @@ local tasks 		= {}
 local taskQueue 	= {}
 
 local olderror = error
-function error(debg,...)
+local function error(debg,...)
 	if game:GetService("RunService"):IsStudio() then
 		print(debg)
 	end

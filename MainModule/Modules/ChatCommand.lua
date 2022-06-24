@@ -183,10 +183,12 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 				return commanddata.OnRun(player,fields,env);
 			end)
 			if success then
+				env.Bind:Fire("CommandFired",true,player,command,fields,result);
 				return result
 			else
 				warn("A script error has occured with a requested command: "..result);
-				env.MetaPlayer(player):Notify("script_error","An error has occured with the requested command: "..result);
+				env.Bind:Fire("CommandError",true,player,command,fields,result);
+				env.MetaPlayer(env,player):Notify({"script_error","An error has occured with the requested command: "..result});
 				return "Script Error";
 			end
 		else

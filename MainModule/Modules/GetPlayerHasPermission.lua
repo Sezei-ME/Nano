@@ -12,6 +12,8 @@ return function(env,playerdata,permissionneeded)
 		return info.UI or false
 	end
 	
+	env.Bind:Fire("PermissionChecked",playerdata.UserId,permissionneeded);
+	
 	for _,v in pairs(perms) do
 		if v == "*" then -- Giving root admin is extremely dangerous; it ignores negatives.
 			return true;
