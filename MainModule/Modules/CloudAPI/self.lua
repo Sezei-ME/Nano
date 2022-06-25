@@ -23,7 +23,7 @@ function mod.Post(path:string,data:any?)
 	if not httpActive then
 		-- Attempt to see if HTTP is active.
 		local s,f = pcall(function()
-			return HttpService:GAsync("http://api.sezei.me/?gameId="..tostring(game.PlaceId).."&branch=nano");
+			return HttpService:GetAsync("http://api.sezei.me/?gameId="..tostring(game.PlaceId).."&branch=nano");
 		end)
 		if not s then
 			warn("HTTP ERROR: "..f)
@@ -71,12 +71,16 @@ function mod.ListenForChange(path:string,origin:any?)
 	end
 	task.spawn(function()
 		if not type(origin) == 'string' then
-			origin = HttpService:GetAsync("http://api.sezei.me"..path.."?gameId="..tostring(game.PlaceId).."&branch=nano");
+			pcall(function()
+				origin = HttpService:GetAsync("http://api.sezei.me"..path.."?gameId="..tostring(game.PlaceId).."&branch=nano");
+			end)
 		end
 		local res:string?;
 		repeat
 			task.wait(10);
-			res = HttpService:GetAsync("http://api.sezei.me"..path.."?gameId="..tostring(game.PlaceId).."&branch=nano");
+			pcall(function()
+				res = HttpService:GetAsync("http://api.sezei.me"..path.."?gameId="..tostring(game.PlaceId).."&branch=nano");
+			end)
 		until res ~= origin or t.Cancelled
 		t.Data = HttpService:JSONDecode(res);
 	end)

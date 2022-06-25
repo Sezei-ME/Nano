@@ -97,7 +97,15 @@ function module:NewAsset(typ,options)
 			asset.Txt.TextColor3 = options.Color
 		end
 		asset.Visible = true;
-		return {self = asset};
+		local function edit(options)
+			if options.Text then
+				asset.Txt.Text = options.Text or ""
+			end
+			if options.Color then
+				asset.Txt.TextColor3 = options.Color
+			end
+		end
+		return {self = asset; edit = edit};
 	elseif string.lower(typ) == "playerdropdown" then
 		local asset = assets.Player_Dropdown:Clone();
 		asset.Name = options.Key or options.Name or typ;
@@ -126,18 +134,21 @@ function module:NewAsset(typ,options)
 			asset.Value.Value = options.Default;
 			asset.TextButton.Text = options.Default;
 		end
+		
+		table.sort(options.Options);
+		
 		local num = (#options.Options * 20) - 2
 		for _,ch in pairs(options.Options) do
 			local TickerModule = require(script.Parent.SLTT)
-			local choice = asset.TextButton.Dropdown.ScrollingFrame.Template:Clone();
-			choice.Parent = asset.TextButton.Dropdown.ScrollingFrame
+			local choice = asset.Dropdown.ScrollingFrame.Template:Clone();
+			choice.Parent = asset.Dropdown.ScrollingFrame
 			choice.Name = ch;
 			choice.Text = ch;
-			choice.Visible = true; print(choice.Parent)
+			choice.Visible = true;
 			if choice.Text:len() > 18 then choice.Text = string.sub(choice.Text,1,18) .. "..." end
 		end
-		asset.TextButton.Dropdown.Size = UDim2.new(1,0,0,math.clamp(num,18,80))
-		asset.TextButton.Dropdown.ScrollingFrame.CanvasSize = UDim2.new(0,0,0,num);
+		asset.Dropdown.Size = UDim2.new(1,0,0,math.clamp(num,18,80))
+		asset.Dropdown.ScrollingFrame.CanvasSize = UDim2.new(0,0,0,num);
 		asset.Visible = true;
 		return {self = asset; event = asset.Value.Changed};
 	elseif string.lower(typ) == "boolean" then

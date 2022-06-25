@@ -78,11 +78,13 @@ return function(api)
 			return true;
 		elseif key == "PingRes" then
 			pingchecks[player.UserId] = os.time();
-			if tonumber(reason) and tonumber(reason) >= (math.clamp(1000*(wait()/0.035),1000,1750)) then
+			local tck = task.wait();
+			local tps = 1/tck;
+			if tonumber(reason) and tonumber(reason) >= (math.clamp(1000*(tck/(1/60)),1000,1750)) then
 				if api.MCheat then
 					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is consistantly high)");
 				end
-			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= (math.clamp(350*(wait()/0.035),350,700)) then
+			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= (math.clamp(350*(tck/(1/60)),350,700)) then
 				if api.MCheat then
 					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping delta is very high)");
 				end
@@ -94,8 +96,9 @@ return function(api)
 			end
 			
 			api.playerPings[player.UserId] = reason
-			return true
+			return tostring(api.BetterBasics.math.fround(tps,3)) .. " (" ..(game:GetService("RunService"):IsStudio() and "Studio)" or "Live)")
 		elseif key == "GetSetting" then
+			if reason == "CloudAPI" then return {UseBanlist = api.Data.Settings.CloudAPI.UseBanlist; Token = {UseToken = false; Key = ""}} end; -- Don't send REAL cloudAPI data for security reasons.
 			return api.Data.Settings[reason];
 		elseif key == "GetGameSettings" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
@@ -141,13 +144,31 @@ return function(api)
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
 				local plruserid = (api.Data.Settings.Players[reason[1]] and (api.Data.Settings.Players[reason[1]].UserId or api.Data.Settings.Players[reason[1]].Name and game:GetService("Players"):GetUserIdFromNameAsync(api.Data.Settings.Players[reason[1]].Name)))
 				if not plruserid then plruserid = 0 end;
-				api.Data.Settings.Players[reason[1]].FlagGroup[reason[2]] = reason[3];
-				if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
-					env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.Players[reason[1]].FlagGroup
+				
+				if plruserid == player.UserId then
+					api.MetaPlayer(api,player):Notify({"bulboff","You can't edit your own administration flags!"});
+					return
 				end
-				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
-				api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s \""..reason[2].."\" variable to "..reason[3]});
-				return -- return after the save for quicker thing
+				
+				if type(api.Data.Settings.Players[reason[1]].FlagGroup) == "table" then
+					api.Data.Settings.Players[reason[1]].FlagGroup[reason[2]] = reason[3];
+					if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
+						env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.Players[reason[1]].FlagGroup
+					end
+					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+					api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s \""..reason[2].."\" variable to "..reason[3]});
+					return -- return after the save for quicker thing
+				elseif type(api.Data.Settings.Players[reason[1]].FlagGroup) == "string" then
+					api.Data.Settings.Players[reason[1]].FlagGroup = reason[2];
+					if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
+						env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.FlagGroups[reason[2]];
+					end
+					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+					api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s group to "..reason[2]});
+					return -- return after the save for quicker thing
+				else
+					api.MetaPlayer(api,player):Notify({"failed","An error has occured while attempting to set key "..reason[1]});
+				end
 			end
 		elseif key == "NewPlayerData" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
@@ -156,6 +177,9 @@ return function(api)
 				table.insert(api.Data.Settings.Players,{UserId = plruserid; FlagGroup = {Key = "Newbie"; Immunity = 1; Flags = "Moderation.Respawn"; UI = true; Chat = true}});
 				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
 				api.MetaPlayer(api,player):Notify({"bulb","You created a new key for "..plruserid..". Refresh the settings to edit the new team member."});
+				if game:GetService("Players"):GetPlayerByUserId(plruserid) then
+					api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned an administration key which will take effect on server shutdown."});
+				end
 				return -- return after the save for quicker thing
 			end
 		elseif key == "DeletePlayerData" then

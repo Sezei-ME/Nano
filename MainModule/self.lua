@@ -274,11 +274,16 @@ function handleJoin(p)
 	env.Bind:Fire("SuccessfulJoin",p.UserId);
 end
 
+local commandenv = {}; -- TODO : Make a 'secure' env variable so external modules won't be able to interfere with the real environment (preferably before Beta 3)
+
 if firstCall then
+	
 	firstCall = false
 	return function(loader:Script)
 		loader.Parent = game:GetService("ServerScriptService")
 		env.Loader = loader
+		
+		
 		if loader:FindFirstChild('Settings') then
 			local sets = require(loader:FindFirstChild('Settings'))
 			env.Data.Settings = sets;

@@ -18,13 +18,13 @@ return function(icon)
 		return "http://www.roblox.com/asset/?id=6023426923";
 	elseif string.lower(icon) == "hint" or string.lower(icon) == "bulb" then
 		return "http://www.roblox.com/asset/?id=6026568247";
-	elseif string.lower(icon) == "bulboff" then
+	elseif string.lower(icon) == "hintoff" or string.lower(icon) == "bulboff" then
 		return "http://www.roblox.com/asset/?id=6026568254"
 	elseif string.lower(icon) == "star" then
 		return "http://www.roblox.com/asset/?id=6026568189"
-	elseif string.lower(icon) == "problem" then
+	elseif string.lower(icon) == "problem" or string.lower(icon) == "warning" then
 		return "http://www.roblox.com/asset/?id=6031086176"
-	elseif string.lower(icon) == "celebration" then
+	elseif string.lower(icon) == "celebration" or string.lower(icon) == "celebrate" then
 		return "http://www.roblox.com/asset/?id=6034767613"
 	else
 		return icon;

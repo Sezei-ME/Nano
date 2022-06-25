@@ -1,10 +1,10 @@
 local TextService = game:GetService("TextService")
 local env = {
-	InternalBuild = "BETA_PRE2C10";
-	TrueBuild = 49; -- QA_BUILD[n]
+	InternalBuild = "BETA_2";
+	TrueBuild = 50; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
-	Ingame = {Admins = {}; Bans = {}};
+	Ingame = {Admins = {}; Bans = {}; };
 	Client = {Modules = {}}; -- Modules are being sent to all clients in order to create custom functions.
 	Strings = {
 		Ban_Server_Permanent = "You are server-banned for \"{arg:banreason}\". This ban is active until the server will shutdown.";

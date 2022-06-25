@@ -449,104 +449,6 @@ function module:ClearCharacter(character)
 	end
 end
 
-function module:OldMorphHandler(plr, char, morph, rigType)
-	local head = char.Head
-	if rigType == Enum.HumanoidRigType.R15 then
-		module:ConvertRig(plr, "R6")
-		char = plr.Character
-	end
-	for i,v in pairs(morph:GetChildren()) do
-		if v.ClassName == "Model" then
-			local body_type = "Nothing"
-			if v.Name == "Chest" then
-				body_type = "Torso"
-			elseif v.Name == "Arm1" then
-				body_type = "Left Arm"
-			elseif v.Name == "Arm2" then
-				body_type = "Right Arm"
-			elseif v.Name == "Leg1" then
-				body_type = "Left Leg"
-			elseif v.Name == "Leg2" then
-				body_type = "Right Leg"
-			end
-			local body_part = v:clone()
-			body_part.Parent = char
-			local C = body_part:GetChildren()
-			for i=1, #C do
-				if C[i].className == "Part" or C[i].className == "UnionOperation" then
-					local W = Instance.new("Weld")
-					W.Part0 = body_part.Middle
-					W.Part1 = C[i]
-					local CJ = CFrame.new(body_part.Middle.Position)
-					local C0 = body_part.Middle.CFrame:inverse()*CJ
-					local C1 = C[i].CFrame:inverse()*CJ
-					W.C0 = C0
-					W.C1 = C1
-					W.Parent = body_part.Middle
-				end
-				local Y = Instance.new("Weld")
-				Y.Part0 = char[body_type]
-				Y.Part1 = body_part.Middle
-				Y.C0 = CFrame.new(0, 0, 0)
-				Y.Parent = Y.Part0--]]
-			end
-			for a,b in pairs(body_part:GetChildren()) do
-				if b.ClassName == "Part" or b.ClassName == "UnionOperation" then
-					b.CanCollide = false
-					b.Anchored = false
-				end
-				if b.Name == "Face" then
-					char.Head.face.Texture = b.Decal.Texture
-					b:Destroy()
-				elseif b.Name == "Head" then
-					char.FakeHead.BrickColor = b.BrickColor
-					b:Destroy()
-				end
-			end
-		elseif v.Name == "FakeHead" then
-			if v:FindFirstChild("Decal") then
-				if char.Head:FindFirstChild("face") then
-					char.Head.face.Texture = v.Decal.Texture
-				end
-			end
-			head.BrickColor = v.BrickColor
-			head.Transparency = v.Transparency
-			for c,d in pairs(v:GetChildren()) do
-				if d.ClassName == "SpecialMesh" then
-					d:Clone().Parent = head
-				end
-			end
-			--
-		elseif v.ClassName == "CharacterMesh" then
-			v:Clone().Parent = char
-			v.Name = "CharacterMesh"
-		elseif v.ClassName == "Accessory" or v.ClassName == "Hat" then
-			local accessory = v:Clone()
-			accessory.Parent = char
-			if accessory:FindFirstChild("Handle") then
-				accessory.Handle.Anchored = false
-			end
-		end
-	end
-	if morph.Chest:FindFirstChild("Ab") then
-		for a,b in pairs(char:GetChildren()) do
-			if b.Name == "Left Arm" or b.Name == "Right Arm" or b.Name == "Left Leg" or b.Name == "Right Leg" then
-				b.Transparency = 0
-				b.BrickColor = head.BrickColor
-			elseif b.Name == "Torso" then
-				b.Transparency = 0
-				b.BrickColor = char.Chest.Ab.BrickColor
-			end
-		end
-	else
-		for a,b in pairs(char:GetChildren()) do
-			if b:IsA("BasePart") and b.Name ~= "FakeHead" and b.Name ~= "Radio" then
-				b.Transparency = 1
-			end
-		end
-	end
-end
-
 function module:AddExtraFeatures(plr, char, morph)
 	if morph:FindFirstChild("ExtraFeatures") then
 		local g = morph.ExtraFeatures:clone()
@@ -573,18 +475,6 @@ function module:AddExtraFeatures(plr, char, morph)
 		for a,b in pairs(g:GetChildren()) do
 			b.Anchored = false
 			b.CanCollide = false
-		end
-	end
-end
-
-local function setDeathEnabled(humanoid,value)
-	humanoid:SetStateEnabled("Dead",value)
-	wait()
-	if humanoid:FindFirstChild("SetDeathEnabled") then
-		local char = humanoid.Parent
-		local player = game.Players:GetPlayerFromCharacter(char)
-		if player then
-			pcall(function() humanoid.SetDeathEnabled:InvokeClient(player,value) end)
 		end
 	end
 end

@@ -95,7 +95,7 @@ local function runNotification(icon,message,sound)
 				task.wait(0.07);
 				notification:TweenPosition(UDim2.new(0.5,0,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,false,function()
 					notification.fill.Size = UDim2.new(1,0,1,0);
-					task.wait(1); -- Cooldown
+					task.wait(0.75); -- Cooldown
 					table.remove(notificationsqueue,1);
 					bind:Fire("NotificationEnded");
 					if notificationsqueue[1] then
@@ -124,6 +124,10 @@ local function queueNotification(icon:string,message:string,sound:string?)
 		end)
 		l.MouseButton1Click:Connect(function()
 			table.remove(notificationsqueue,tonumber(l.Name));
+			l:Destroy();
+			if not notificationsqueue[2] then
+				script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
+			end
 		end)
 		runNotification(icon,message,sound);
 	elseif notificationsqueue[1][3] == false then -- If for whatever reason the notifications queue's being held by the 1st instance.
@@ -138,6 +142,10 @@ local function queueNotification(icon:string,message:string,sound:string?)
 		end)
 		l.MouseButton1Click:Connect(function()
 			table.remove(notificationsqueue,tonumber(l.Name));
+			l:Destroy();
+			if not notificationsqueue[2] then
+				script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
+			end
 		end)
 		runNotification(notificationsqueue[1][1],notificationsqueue[1][2],notificationsqueue[1][4]);
 	else
@@ -152,6 +160,10 @@ local function queueNotification(icon:string,message:string,sound:string?)
 		end)
 		l.MouseButton1Click:Connect(function()
 			table.remove(notificationsqueue,tonumber(l.Name));
+			l:Destroy();
+			if not notificationsqueue[2] then
+				script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,40),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
+			end
 		end)
 		script.Parent.Queue:TweenPosition(UDim2.new(1,-20,1,0),Enum.EasingDirection.Out,Enum.EasingStyle.Quad,0.3,true);
 	end
@@ -292,17 +304,18 @@ end
 
 local contributions = {
 	-- [id] = {Contribution, Color3, AssetURL};
-	[253925749] = {"System Creator\n(Backend)", Color3.new(1, 0.0588235, 0.466667),"http://www.roblox.com/asset/?id=6023426938"};
-	[1892103295] = {"System Creator\n(Frontend)", Color3.new(1, 0.333333, 1),"http://www.roblox.com/asset/?id=6023426938"};
+	[253925749] = {"System Backend", Color3.new(1, 0.0588235, 0.466667),"http://www.roblox.com/asset/?id=6023426938"};
+	[1892103295] = {"System Frontend", Color3.new(1, 0.333333, 1),"http://www.roblox.com/asset/?id=6023426938"};
 	[259773550] = {"Notable Feedback", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668946"};
 	[177424228] = {"Notable Feedback", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668946"};
-	[73885696] = {"S.ME Administrator\nContributor", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6022668911"};
-	[173471724] = {"Thanks for everything.. :(\n(2002 - 2021)", Color3.new(0.623529, 0.572549, 1),"http://www.roblox.com/asset/?id=6023426974"};
+	[73885696] = {"S.ME Administrator", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6022668911"};
+	[173471724] = {"Base AGB\n(2002 - 2021)", Color3.new(0.623529, 0.572549, 1),"http://www.roblox.com/asset/?id=6023426974"};
 	[441169726] = {"QA Tester", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668880"};
-	[1094977] = {"Contributor", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668911"};
+	[1094977] = {"Datastore Module", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668911"};
+	[82347291] = {"Open-Source Modules", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668911"};
 	[711971214] = {"QA Tester", Color3.new(0.227451, 0.12549, 1),"http://www.roblox.com/asset/?id=6022668880"};
 	[153503346] = {"S.ME Administrator", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6035078889"};
-	[163986693] = {"S.ME Administrator\nContributor", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6022668911"};
+	[163986693] = {"Code Optimising\nS.ME Administrator", Color3.new(1, 0.333333, 0),"http://www.roblox.com/asset/?id=6022668911"};
 }
 
 UIS.WindowFocused:Connect(function()
@@ -1078,6 +1091,21 @@ main.Frame.Settings.MouseButton1Click:Connect(function()
 	end
 end)
 
+main.Frame.Connection.MouseButton1Click:Connect(function()
+	if main.TopUI.Visible == true and main.TopUI.Connection.Visible == true then
+		main.TopUI.Visible = false;
+	else
+		main.TopUI.Visible = true;
+		for _,v in pairs(main.TopUI:GetChildren()) do
+			if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+				v.Visible = false;
+			end
+		end
+		main.TopUI.Connection.Visible = true;
+		main.TopUI.Title.Text = "Connection Info";
+	end
+end)
+
 local lookingAtStarred = false
 main.Frame.Starred.MouseButton1Click:Connect(function()
 	lookingAtStarred = not lookingAtStarred
@@ -1270,6 +1298,8 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 				bubble.self.Parent = parent;
 				bubble.self.Visible = true;
 				
+				local availablegroups = remote:InvokeServer("GetSetting","FlagGroups");
+				
 				local vals = {
 					Chat = false;
 					UI = false;
@@ -1334,9 +1364,37 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 							remote:InvokeServer("DeletePlayerData",tonumber(k));
 						end
 					end)
+				elseif type(v.FlagGroup) == "string" then
+					local groups = {}
+					for group,_ in pairs(availablegroups) do
+						table.insert(groups,group);
+					end
 					
+					local changer = bubble:AddAsset("CustomDropdown",{Name = "User FlagGroup"; Default = v.FlagGroup; Options = groups});
+					changer.event:Connect(function(newval)
+						vals.Flags = newval
+						if sendEvents then
+							remote:InvokeServer("SetPlayerData",{tonumber(k),newval})
+						end
+					end)
+					
+					local delete = bubble:AddAsset("Button",{Key = "Delete", Name = "Delete Administration Key", Color = Color3.new(1, 0.266667, 0.266667)})
+					delete.event:Connect(function()
+						if delete.self.Btn.Text == "Delete Administration Key" then
+							delete.self.Btn.Text = "Are you sure? Click again to delete."
+							task.spawn(function()
+								task.wait(3)
+								if delete.self.Btn.Text == "Are you sure? Click again to delete." then
+									delete.self.Btn.Text = "Delete Administration Key"
+								end
+							end)
+						elseif delete.self.Btn.Text == "Are you sure? Click again to delete." then
+							delete.self.Btn.Text = "Delete request sent. Refresh the settings."
+							remote:InvokeServer("DeletePlayerData",tonumber(k));
+						end
+					end)
 				else
-					bubble:AddAsset("message",{Text = "User is in a set group! Changing groups is not yet supported.",Color = Color3.new(1, 1, 1)})
+					bubble:AddAsset("message",{Text = "This user has a corrupted administration key.",Color = Color3.new(1, 0.266667, 0.266667)})
 					local delete = bubble:AddAsset("Button",{Key = "Delete", Name = "Delete Administration Key", Color = Color3.new(1, 0.266667, 0.266667)})
 					delete.event:Connect(function()
 						if delete.self.Btn.Text == "Delete Administration Key" then
@@ -1451,6 +1509,12 @@ else
 	script.Parent.Settings:Destroy();
 end
 
+local c = main.TopUI.Connection
+local rawcon = NanoWorks:NewAsset("message",{Name = "rawcon"; Text = "Raw Ping:\n---"; Color = Color3.new(1,1,1)});
+local srvtck = NanoWorks:NewAsset("message",{Name = "srvtck"; Text = "Server TPS:\n---"; Color3.new(1,1,1)})
+rawcon.self.Parent = c;
+srvtck.self.Parent = c;
+
 --Initial ping update
 local starttick = tick();
 local res = math.floor(math.abs(tick() - starttick) * 1000)
@@ -1461,12 +1525,14 @@ task.spawn(function()
 	while task.wait(2) do -- PINGER
 		local starttick = os.clock();
 		local reply = remote:InvokeServer("PingTest");
-		local res = math.floor(math.abs(os.clock() - starttick) * 1000)
-		remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
+		local rawres = math.abs(os.clock() - starttick) * 1000;
+		local res = math.floor(rawres)
+		local srvtick = remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
 		main.Ping.ms.Text = tostring(res).."ms"
 		-- Get image by category; Low, Med, High or V.High
 		if res >= 1000 then
 			main.Ping.ms.Text = ">999ms"
+			main.Ping.ImageColor3 = Color3.new(0.470588, 0, 0)
 		elseif res >= 500 then -- Critically High
 			main.Ping.Image = "rbxassetid://9189318676"
 			main.Ping.ImageColor3 = Color3.new(0.666667,0,0)
@@ -1486,5 +1552,7 @@ task.spawn(function()
 			main.Ping.Image = "rbxassetid://9189319213"
 			main.Ping.ImageColor3 = Color3.new(1,1,1)
 		end
+		rawcon.edit({Text = "Raw Ping:\n"..rawres,Color = main.Ping.ImageColor3});
+		srvtck.edit({Text = "Server TPS:\n"..  srvtick });
 	end
 end)

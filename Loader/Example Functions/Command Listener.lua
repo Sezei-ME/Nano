@@ -1,5 +1,5 @@
 -- Place the module in the Functions folder of Nano.
--- ...NanoLoader.Functions
+-- game.ServerScriptService["::NANO::"].Functions
 
 local module = {_nano = {}}
 
