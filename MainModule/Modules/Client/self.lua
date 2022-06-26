@@ -1279,6 +1279,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 		local function permBubble(tbl,prev,parent,stack,name)
 			NanoWorks:NewAsset("message",{Text = "Warning: Giving a '*' permission is dangerous! They can remove other's permissions too, regardless of immunity!",Color = Color3.new(1, 1, 0.498039)}).self.Parent = parent
 			local res = remote:InvokeServer("GetSetting","Players");
+			local availablegroups = remote:InvokeServer("GetSetting","FlagGroups");
 			for k,v in pairs(res) do
 				local bubble = nil;
 				if v["UserId"] then
@@ -1297,8 +1298,6 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 				bubble.self.Name = k;
 				bubble.self.Parent = parent;
 				bubble.self.Visible = true;
-				
-				local availablegroups = remote:InvokeServer("GetSetting","FlagGroups");
 				
 				local vals = {
 					Chat = false;
@@ -1417,7 +1416,14 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 			bubble.self.Name = "newmember";
 			bubble.self.Parent = parent;
 			bubble.self.Visible = true;
+			
+			local groups = {"Custom"};
+			for k,_ in pairs(availablegroups) do
+				table.insert(groups,k);
+			end
+			
 			local useridf = bubble:AddAsset("String",{Key = "useridf", Name = "Player Identifier (Username | ID)"});
+			local groupf = bubble:AddAsset("CustomDropdown",{Name = "User FlagGroup"; Default = "Custom"; Options = groups});
 			local btn = bubble:AddAsset("Button",{Key = "create",Name = "Click here to create the new key!", Color = Color3.new(1, 0.333333, 0)});
 			
 			local debounce = false;
@@ -1429,7 +1435,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					debounce = false;
 				end)
 				
-				remote:InvokeServer("NewPlayerData",useridf.self.Value.Value);
+				remote:InvokeServer("NewPlayerData",useridf.self.Value.Value,groupf.self.Value.Value);
 			end)
 		end
 

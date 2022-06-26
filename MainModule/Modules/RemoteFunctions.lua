@@ -27,8 +27,8 @@ return function(api)
 	if not env then env = api end;
 	api.Remote = remote;
 	api.Event = event;
-	remote.OnServerInvoke = function(player,key,reason)
-		api.Bind:Fire("FunctionFired",player,key,reason);
+	remote.OnServerInvoke = function(player,key,reason,anotherreason)
+		api.Bind:Fire("FunctionFired",player,key,reason,anotherreason);
 		
 		if key == "CanUseUI" then
 			return api.GetPlayerHasPermission(api,api.Ingame.Admins[player.UserId],"UI"), api.Build();
@@ -156,10 +156,13 @@ return function(api)
 						env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.Players[reason[1]].FlagGroup
 					end
 					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
-					api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s \""..reason[2].."\" variable to "..reason[3]});
+					api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s \""..reason[2].."\" variable to "..tostring(reason[3])});
 					return -- return after the save for quicker thing
 				elseif type(api.Data.Settings.Players[reason[1]].FlagGroup) == "string" then
 					api.Data.Settings.Players[reason[1]].FlagGroup = reason[2];
+					if not api.Data.Settings.FlagGroups[reason[2]] then
+						api.MetaPlayer(api,player):Notify({"bulboff","Something went wrong attempting to set key "..reason[1].." FlagGroup."});
+					end
 					if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
 						env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.FlagGroups[reason[2]];
 					end
@@ -172,15 +175,38 @@ return function(api)
 			end
 		elseif key == "NewPlayerData" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
-				local plruserid = tonumber(reason) or game:GetService("Players"):GetUserIdFromNameAsync(reason)
-				if not plruserid then api.MetaPlayer(api,player):Notify({"bulboff","New key creation for "..plruserid.." has failed."}); return false end;
-				table.insert(api.Data.Settings.Players,{UserId = plruserid; FlagGroup = {Key = "Newbie"; Immunity = 1; Flags = "Moderation.Respawn"; UI = true; Chat = true}});
-				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
-				api.MetaPlayer(api,player):Notify({"bulb","You created a new key for "..plruserid..". Refresh the settings to edit the new team member."});
-				if game:GetService("Players"):GetPlayerByUserId(plruserid) then
-					api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned an administration key which will take effect on server shutdown."});
+				for akey,group in pairs(api.Data.Settings.Players) do
+					if (group and (group.UserId or group.Name and game:GetService("Players"):GetUserIdFromNameAsync(group.Name))) == tonumber(reason) or game:GetService("Players"):GetUserIdFromNameAsync(reason) then
+						api.MetaPlayer(api,player):Notify({"bulboff","New key creation for "..reason.." was prevented: User already exists."});
+						return
+					end
 				end
-				return -- return after the save for quicker thing
+				
+				local plruserid = tonumber(reason) or game:GetService("Players"):GetUserIdFromNameAsync(reason)
+				if not plruserid then api.MetaPlayer(api,player):Notify({"bulboff","New key creation for "..reason.." has failed: Couldn't find user."}); return false end;
+				
+				if anotherreason == "Custom" then
+					table.insert(api.Data.Settings.Players,{UserId = plruserid; FlagGroup = {Key = "Newbie"; Immunity = 1; Flags = "Moderation.Respawn"; UI = true; Chat = true}});
+					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+					api.MetaPlayer(api,player):Notify({"bulb","You created a new key for "..plruserid..". Refresh the settings to edit the new team member."});
+					if game:GetService("Players"):GetPlayerByUserId(plruserid) then
+						api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned an administration key which will take effect on server shutdown."});
+					end
+					return -- return after the save for quicker thing
+				else
+					if api.Data.Settings.FlagGroups[anotherreason] then
+						table.insert(api.Data.Settings.Players,{UserId = plruserid; FlagGroup = anotherreason});
+						api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+						api.MetaPlayer(api,player):Notify({"bulb","You added "..plruserid.." to group \""..anotherreason.."\"."});
+						if game:GetService("Players"):GetPlayerByUserId(plruserid) then
+							api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned into group \""..anotherreason.."\". Please rejoin."});
+							env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.FlagGroups[anotherreason];
+						end
+						return -- return after the save for quicker thing
+					else
+						api.MetaPlayer(api,player):Notify({"bulboff","New key creation for "..reason.." has failed: No such group exists."});
+					end
+				end
 			end
 		elseif key == "DeletePlayerData" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then

@@ -373,4 +373,3 @@ else
 		-- module, since it could result in bad actors getting into the environment without your knowledge.
 		-- Do so at your own risk only; and remember; forking the main module rather than using functions will void any attempt to support you.
 end
-
