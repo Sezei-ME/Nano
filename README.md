@@ -23,8 +23,8 @@ Additional contributors can be found within the code.
 ![Intro](https://doy2mn9upadnk.cloudfront.net/uploads/default/original/4X/0/7/a/07a2d9c8c244a93634836abebe8abb739fa388a0.gif)
 ![Message](https://doy2mn9upadnk.cloudfront.net/uploads/default/original/4X/f/d/9/fd9a324ac57f70ea6ae12d165dd3191322b27033.png)
 ### Certifications (cuz why not)
-![Current Build](https://img.shields.io/badge/latest%20build-51-ff7700?style=for-the-badge)
-![Current Build](https://img.shields.io/badge/latest%20version-BETA%202A-ff7700?style=for-the-badge)
+![Current Build](https://img.shields.io/badge/latest%20build-52-ff7700?style=for-the-badge)
+![Current Build](https://img.shields.io/badge/latest%20version-BETA%20PRE3-ff7700?style=for-the-badge)
 ![Active Issues](https://img.shields.io/github/issues-raw/Sezei-ME/Nano?style=for-the-badge)
 
 ![Contains Very Delicious Spaghetti](https://img.shields.io/badge/Contains-Delicious_Spaghetti_and_Meatballs-blue?style=for-the-badge)

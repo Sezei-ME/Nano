@@ -1,12 +1,32 @@
-local firstCall = true
+local firstCall = true;
+local betabuild = false;
 local env = require(script.BaseEnvironment);
 local Decoder = require(script.ErrorCodes);
+
+-- nightly stuff
+local loadtime = os.clock();
+local loads = 2; -- 2 initial loads (decoder and baseenv)
+-- end
 
 local Roblox = {
 	warn = warn;
 }
 
-local function warn(code, ...)
+if script:FindFirstChild("WARNING - THIS IS A BETA BUILD!") then
+	betabuild = true;
+	env.NightlyBuild = true;
+	script:FindFirstChild("WARNING - THIS IS A BETA BUILD!"):Remove()
+end
+
+function env.warn(code, ...)
+	if betabuild then
+		if tonumber(code) then
+			Roblox.warn("Nano Nightly | Error "..code.." - "..Decoder:ResolveCode(code).." | ",...)
+		else
+			Roblox.warn("Nano Nightly | ",...)
+		end
+		return
+	end
 	if tonumber(code) then
 		Roblox.warn("Nano | Error "..code.." - "..Decoder:ResolveCode(code).." | ",...)
 	else
@@ -26,6 +46,7 @@ end
 
 for _,v in pairs(script:GetChildren()) do
 	if v:IsA("ModuleScript") then
+		if betabuild then loads+=1 end
 		mod = require(v)
 		if type(mod) == "table" and mod["_NanoWrapper"] then
 			env[v.Name] = mod._NanoWrapper(env);
@@ -43,7 +64,7 @@ env.playerPings = {}
 
 env.RemoteFunctions(env);
 
-function buildRankTable(p,info,key)
+function buildRankTable(p,info,...)
 	env.Ingame.Admins[p.UserId] = {};
 	if type(info["FlagGroup"]) == 'table' then
 		env.Ingame.Admins[p.UserId] = info
@@ -58,10 +79,10 @@ function buildRankTable(p,info,key)
 		end
 	end
 	
-	warn(format("Invalid Data while building RankTable!\np var <p>\ninfo var <info>\nkey var <key>",{["p"] = p; ["info"] = info; ["key"] = key}))
+	env.warn(format("Invalid Data while building RankTable!\np var <p>\ninfo var <info>",{["p"] = p; ["info"] = info}))
 end
 
-function buildGroupTable(p,info,key)
+function buildGroupTable(p,info,...)
 	env.Ingame.Admins[p.UserId] = {};
 	if type(info) == 'table' then
 		env.Ingame.Admins[p.UserId].FlagGroup = info
@@ -79,11 +100,12 @@ function toCommands(folder,stack)
 	for _,v in pairs(folder:GetChildren()) do
 		if v:IsA('ModuleScript') then
 			local s,f = pcall(function()
+				loads+=1
 				local mv = require(v) -- mv: module table
 				if mv.OnLoad then -- if OnLoad exists in the table, load it now
 					local suc,res = pcall(function() mv.OnLoad(env) end);
 					if not suc then
-						warn(3, "An OnLoad function has failed; Source: ".. v.Parent.Name .. "." .. v.Name.." ; "..res);
+						env.warn(3, "An OnLoad function has failed; Source: ".. v.Parent.Name .. "." .. v.Name.." ; "..res);
 					end
 					mv.OnLoad = nil;
 				end
@@ -91,7 +113,7 @@ function toCommands(folder,stack)
 				env.Data.Commands[string.lower(mv.Name)] = {mv,stack}
 			end)
 			if not s then
-				warn(3, "A command has failed to get compiled; "..f)
+				env.warn(3, "A command has failed to get compiled; "..f)
 			end
 		elseif v:IsA('Folder') then
 			toCommands(v,((stack~="" and stack.."." or "") .. v.Name))
@@ -173,7 +195,7 @@ function handleJoin(p)
 					end
 				end
 			else
-				warn(4, "Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
+				env.warn(4, "Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
 			end
 		end
 
@@ -194,7 +216,12 @@ function handleJoin(p)
 			env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Game Owner"; Immunity = 255; Flags = "*"; UI = true; Chat = true}};
 		end
 	end
-
+	
+	-- Better Priority Thing (BETA_2B); Defined Users -> Groups -> Gamepasses 
+	
+	local groups = {};
+	local gamepasses = {};
+	
 	if not env.Ingame.Admins[p.UserId] then
 		for key,v in pairs(env.Data.Settings.Players) do
 			if v["UserId"] then
@@ -208,11 +235,15 @@ function handleJoin(p)
 					break;
 				end
 			elseif v["Gamepass"] then
+				table.insert(gamepasses,v);
+				--[[
 				if game:GetService("MarketplaceService"):UserOwnsGamePassAsync(p.UserId,v["Gamepass"]) then
 					buildRankTable(p,v,key);
 					break;
-				end
+				end]]
 			elseif v["Group"] then
+				table.insert(groups,v);
+				--[[
 				local rank = p:GetRankInGroup(tonumber(v["Group"]));
 				if not v["Rank"] then
 					warn(2,"Malformed Settings: 'Group' flags require a rank table.")
@@ -225,11 +256,50 @@ function handleJoin(p)
 							break;
 						end
 					end
-				end
+				end]]
 			end
 		end;
 	end
-
+	
+	-- If not admin; Check groups.
+	if not env.Ingame.Admins[p.UserId] then
+		for key,v in pairs(groups) do
+			local rank = p:GetRankInGroup(tonumber(v["Group"]));
+			if not v["Rank"] then
+				env.warn(2,"Malformed Settings: 'Group' flags require a rank table.")
+			elseif type(v["Rank"]) ~= "table" then
+				env.warn(2,"Nano | Malformed Settings: 'Rank' flag must be a table type.")
+			else
+				if v["Rank"] then
+					for rnk,vv in pairs(v["Rank"]) do
+						if rank == tonumber(rnk) then
+							buildGroupTable(p,vv,rnk);
+							break;
+						end
+					end
+				elseif v["Ranks"] then
+					for rnk,vv in pairs(v["Ranks"]) do 
+						if rank == tonumber(rnk) then
+							buildGroupTable(p,vv,rnk);
+							break;
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	-- If STILL not admin; Check gamepasses.
+	if not env.Ingame.Admins[p.UserId] then
+		for key,v in pairs(gamepasses) do
+			if game:GetService("MarketplaceService"):UserOwnsGamePassAsync(p.UserId,v["Gamepass"]) then
+				buildRankTable(p,v,key);
+				break;
+			end
+		end
+	end
+	
+	-- Give up and give the Non-Admin key.
 	if not env.Ingame.Admins[p.UserId] then
 		env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Non-Admin"; Immunity = 0; Flags = ""; UI = false; Chat = false}};
 	end
@@ -241,7 +311,7 @@ function handleJoin(p)
 
 	if env.Data.Settings.Intro.Enabled then
 		if env.Data.Settings.Intro.AdminOnly then
-			if env.Ingame.Admins[p.UserId].FlagGroup.Immunity > 0 then
+			if tonumber(env.Ingame.Admins[p.UserId].FlagGroup.Immunity) > 0 then
 				env.Intro(p)
 			end
 		else
@@ -285,10 +355,11 @@ if firstCall then
 		
 		
 		if loader:FindFirstChild('Settings') then
+			loads+=1
 			local sets = require(loader:FindFirstChild('Settings'))
 			env.Data.Settings = sets;
 		else
-			warn(1,"The settings module is missing.");
+			env.warn(1,"The settings module is missing.");
 			return
 		end
 
@@ -316,15 +387,16 @@ if firstCall then
 		local settingsvalid = env.SettingsValidator(env.Data.Settings)
 
 		if not settingsvalid and not savedsettings then
-			warn(2,"Due to a settings error, your support attempt will be voided.\nPlease fix the above issues before contacting support if any issues indeed occur.")
+			env.warn(2,"Due to a settings error, your support attempt will be voided.\nPlease fix the above issues before contacting support if any issues indeed occur.")
 		elseif savedsettings and not settingsvalid then
-			warn(2,"Nano | Your datastore key's settings are corrupted.\nPlease attempt to switch the datastore key before contacting support.")
+			env.warn(2,"Nano | Your datastore key's settings are corrupted.\nPlease attempt to switch the datastore key before contacting support.")
 		end
 
 		if loader:FindFirstChild("Functions") then
 			for _,v in pairs(loader:FindFirstChild("Functions"):GetChildren()) do
 				if v:IsA("ModuleScript") then
 					pcall(function()
+						loads+=1
 						local r = require(v) -- returned data
 						if r["_nano"] then
 							if not type(r["_nano"]["addtoEnv"]) == "boolean" or not r._nano.addtoEnv then
@@ -351,7 +423,7 @@ if firstCall then
 		env.Data.Commands = {}
 		local s = toCommands(loader:FindFirstChild("Commands"));
 		if not s then
-			warn("No commands were loaded. Attempting to fetch basic commands.")
+			env.warn("No commands were loaded. Attempting to fetch basic commands.")
 			env.Data.Commands = env.BaseCommands;
 		end
 
@@ -363,11 +435,17 @@ if firstCall then
 		game:GetService("Players").PlayerRemoving:Connect(function(p)
 			env.Ingame.Admins[p.UserId] = nil;
 		end)
+		if betabuild then print("Nano Nightly | Loaded successfully in "..math.round(math.abs(loadtime-os.clock())*1000).."ms "..(game:GetService("RunService"):IsStudio() and "(In Studio)" or "(In Live-Server)") .. " with "..loads.." loads of modules.") end;
 		env.Bind:Fire("NanoLoaded");
 	end
 else
-	env.Bind:Fire("LoadAttempt");
+	env.Bind:Fire("LoadAttempt"); -- they tried :shrug:
 	return -- Return nothing, but don't init the admin again either.
+		function(loader:Script?|ModuleScript?)
+			if typeof(loader) == "Instance" then
+				print("Nano | Attempt to load Nano after it loaded caught. Source: "..loader.Name);
+			end
+		end
 
 		-- If you want to return the environment, or literally anything else, you will need to fork the module; I do not allow this with a "vanilla"
 		-- module, since it could result in bad actors getting into the environment without your knowledge.

@@ -172,14 +172,19 @@ end
 local waitingforserver=true;
 task.spawn(function()
 	if game:GetService("RunService"):IsStudio() then
-		task.wait(7.5);
+		task.wait(12.5);
 	else
-		task.wait(3);
+		task.wait(5);
 	end
 
-	if waitingforserver == true then
+	if waitingforserver then
 		warn(-1,"Nano will stay dormant until the server successfully wakes. It might take a while.")
 		queueNotification("http://www.roblox.com/asset/?id=6031071057","Looks like the server is taking a while to respond. Nano can not run without the server, hence it will stay dormant.")
+	end
+	
+	if task.wait(20) and waitingforserver then
+		warn(-1,"The server is taking too long to respond.")
+		queueNotification("http://www.roblox.com/asset/?id=6031071057","The server is taking too long to respond. Perhaps attempt to rejoin?")
 	end
 end)
 local canUse,Build = remote:InvokeServer("CanUseUI")
@@ -194,6 +199,21 @@ if not serverAccentColor then
 		Forced = false;
 	}
 end
+
+-- Attempt to get custom assets from the server.
+-- TODO
+
+-- Once attempt ends, fill in the emptiness.
+for _,v in pairs(script.DefaultAssets:GetChildren()) do
+	if not Assets:FindFirstChild(v.Name) then
+		v.Parent = Assets;
+	end
+end
+
+-- Clean up so less VRAM will be taken. (yes, it's still taken even if not rendered for some reason.)
+NanoWorks:FullClear(script.DefaultAssets);
+game:GetService("Debris"):AddItem(script.DefaultAssets,1);
+
 
 local function isBright(color:Color3)
 	local brightness = (color.R * 0.45) + (color.G * 0.65) + (color.B * 0.55);
@@ -900,13 +920,13 @@ local rankCache = {};
 
 mouse.Move:Connect(function()
 	mfollow.Position = UDim2.fromOffset(mouse.X+3,mouse.Y+40);
-	if mouse.Target and mouse.Target.Parent:FindFirstChildOfClass('Humanoid') and not mouseinUI then
+	if mouse.Target and mouse.Target:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and not mouseinUI then
 		local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
 		local pos1 = char.HumanoidRootPart.Position
-		local pos2 = mouse.Target.Parent.HumanoidRootPart.Position
-		mfollow.Hover_3d.Text = " <b>"..mouse.Target.Parent.Name.. "</b>\nDistance: "..math.floor((pos1 - pos2).magnitude).." Studs"
-		if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent) then
-			local p = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent)
+		local pos2 = mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart.Position
+		mfollow.Hover_3d.Text = " <b>"..mouse.Target:FindFirstAncestorWhichIsA("Model").Name.. "</b>\nDistance: "..math.floor((pos1 - pos2).magnitude).." Studs"
+		if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")) then
+			local p = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model"))
 			if not rankCache[p.UserId] then rankCache[p.UserId] = remote:InvokeServer("GetPlayerDataFromId",p.UserId); end
 			local pdata = rankCache[p.UserId];
 			mfollow.Hover_3d.Text ..= "\nUserId: "..p.UserId
@@ -927,6 +947,7 @@ mouse.Move:Connect(function()
 		end
 		mfollow.Hover_3d.Visible = true;
 	else
+		mfollow.Hover_3d.Text = "";
 		mfollow.Hover_3d.Visible = false;
 	end
 end)
@@ -946,14 +967,14 @@ bind.Event:Connect(function(event,inst)
 		main.TargetMode.Visible = true;
 		ev = mouse.Button1Down:Connect(function()
 			if not focused then return end
-			if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent) then
+			if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")) then
 				ev:Disconnect();
 				if settings.ShowTargetmodeHint[2] then
-					queueNotification("http://www.roblox.com/asset/?id=6026568247","Target has been selected: "..game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent).Name);
+					queueNotification("http://www.roblox.com/asset/?id=6026568247","Target has been selected: "..game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")).Name);
 				end
 				inTargetMode=false;
 				main.TargetMode.Visible = false;
-				inst.Text = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent).Name;
+				inst.Text = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")).Name;
 			else
 				if settings.ShowTargetmodeHint[2] then
 					queueNotification("http://www.roblox.com/asset/?id=6026568247","You left Mouse Targeting mode since you clicked on a non-player object.");
@@ -1294,6 +1315,9 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					end
 				elseif v["Name"] then
 					bubble = NanoWorks:CreateBubble(v.Name);
+				else
+					continue -- SINCE WHEN DID THIS EXIST?!
+					-- Serious note: Skips Groups and Gamepasses.
 				end
 				bubble.self.Name = k;
 				bubble.self.Parent = parent;

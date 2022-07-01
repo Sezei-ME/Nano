@@ -1,22 +1,23 @@
 local TextService = game:GetService("TextService")
 local env = {
-	InternalBuild = "BETA_2A";
-	TrueBuild = 51; -- QA_BUILD[n]
+	InternalBuild = "BETA_PRE3";
+	TrueBuild = 52; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
 	Ingame = {Admins = {}; Bans = {}; };
 	Client = {Modules = {}}; -- Modules are being sent to all clients in order to create custom functions.
 	Strings = {
-		Ban_Server_Permanent = "You are server-banned for \"{arg:banreason}\". This ban is active until the server will shutdown.";
-		Ban_Server_Temporary = "You are server-banned for \"{arg:banreason}\". Estimated time left: {arg:timeleft} minutes.";
-		Ban_Game_Permanent = "You are game-banned for \"{arg:banreason}\". This ban is permanent.";
-		Ban_Game_Temporary = "You are game-banned for \"{arg:banreason}\". Estimated time left: {arg:timeleft} minutes.";
+		Ban_Server_Permanent = "You are server-banned for \"<banreason>\". This ban is active until the server will shutdown.";
+		Ban_Server_Temporary = "You are server-banned for \"<banreason>\". Estimated time left: <timeleft> minutes.";
+		Ban_Game_Permanent = "You are game-banned for \"<banreason>\". This ban is permanent.";
+		Ban_Game_Temporary = "You are game-banned for \"<banreason>\". Estimated time left: <timeleft> minutes.";
 		Intro_Top = "Nano";
 		Intro_Middle = "Created by Sezei.Me and Axelius";
 	};
 	MainModule = script.Parent;
 	Bind = script.Parent._Event;
 	Errors = {}; -- Collect the errors that occured. Available since QA_BUILD21
+	-- not really used so might be removed later.
 }
 
 -- Legacy functions: Use env.MetaPlayer(env, plr)
@@ -31,7 +32,8 @@ function env.MessageAll(data) env.Event:FireAllClients("Message",data) end
 function env.NotifyAll(data) env.Event:FireAllClients("Notify",data) end
 function env.Build() return env.InternalBuild end
 function env.Store()
-	return env.Datastore(env.Data.Settings.Datastore,env,false)
+	ds = ds or env.Datastore(env.Data.Settings.Datastore,env,true) --|| Checks if 'ds' already exists so it can return it before (re-)opening a new datastore table.
+	return ds
 end
 
 function env.TextFilter(txt,sender)

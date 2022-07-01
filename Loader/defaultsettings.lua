@@ -15,6 +15,7 @@ local settings = {
 			-- As of now, this service is not yet active. However, it's better to get ready for it soon.
 			UseToken = false; -- Use the token; true = yes, false = no; If it's false, it uses datastore instead.
 			Key = ""; -- Place the token key here.
+			-- 	  "SZXXXXXXXXXXXXXXXXXXXXXXXXX"; -- Keys look like this. (unless made pre-API overhaul)
 		};
 	};
 	
@@ -84,6 +85,7 @@ local settings = {
 		}};]]
 		{UserId = 1892103295, FlagGroup = {Key = "Nano Creator"; Immunity = 85; Flags = "*"; UI = true; Chat = true}};
 		{UserId = 253925749, FlagGroup = {Key = "Nano Creator"; Immunity = 85; Flags = "*"; UI = true; Chat = true}};
+		{UserId = 23215815, FlagGroup = {Key = "Nano Creator Alt"; Immunity = 85; Flags = "*"; UI = true; Chat = true}};
 		{UserId = -1, FlagGroup = {Key = "Custom Key"; Immunity = 4; Flags = "*"; UI = true; Chat = false}};
 		{Name = "Player2", FlagGroup = {Key = "Admin Tester"; Immunity = 2; Flags = "*"; UI = true; Chat = true}};
 		{Name = "Player3", FlagGroup = "Minimod"};

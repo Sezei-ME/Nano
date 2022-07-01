@@ -26,6 +26,16 @@ function module.table.fullclone(t)
 	return new;
 end
 
+function module.string.placeholder(origin,placeholders)
+	local s:string = tostring(origin);
+
+	for old,new in pairs(placeholders) do
+		s = s:gsub("<"..old..">",tostring(new));
+	end
+
+	return s;
+end
+
 function module.bool.tobool(self)
 	if type(self) == 'nil' then
 		return false;

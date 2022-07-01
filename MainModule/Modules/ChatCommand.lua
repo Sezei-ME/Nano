@@ -127,7 +127,7 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 					local plr = FindPlayers(player,v)[1] or nil;
 					if plr then
 						local othergroup = env.Ingame.Admins[plr.UserId].FlagGroup
-						if othergroup.Immunity < group.Immunity then
+						if tonumber(othergroup.Immunity) < tonumber(group.Immunity) then
 							fields[field.Internal] = plr
 						else
 							if field.Required then env.Notify(player,{"no_permission","You cannot target "..plr.Name.." due to them having a higher immunity level than yours."});return false end
@@ -143,7 +143,7 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 					if plrs[1] then
 						for num,plr in pairs(plrs) do
 							local othergroup = env.Ingame.Admins[plr.UserId]
-							if not (othergroup.Immunity < group.Immunity) then
+							if not (tonumber(othergroup.Immunity) < tonumber(group.Immunity)) then
 								table.remove(plrs,num)
 							end
 						end
@@ -164,7 +164,7 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 					local plr = FindPlayers(player,v)[1] or nil;
 					if plr then
 						local othergroup = env.Ingame.Admins[plr.UserId].FlagGroup
-						if othergroup.Immunity < group.Immunity then
+						if tonumber(othergroup.Immunity) < tonumber(group.Immunity) then
 							fields[field.Internal] = env.MetaPlayer(env,plr);
 						else
 							if field.Required then env.Notify(player,{"no_permission","You cannot target "..plr.Name.." due to them having a higher immunity level than yours."});return false end

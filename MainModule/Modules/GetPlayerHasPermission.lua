@@ -25,16 +25,16 @@ return function(env,playerdata,permissionneeded)
 			end
 			if localperm[1] == permissionfolder[1] then
 				if localperm[2] == "*" then
-					if negative then print("Negated "..v) return false end;
+					if negative then return false end;
 					return true;
 				elseif localperm[2] == permissionfolder[2] then
 					if permissionfolder[3] then
 						if localperm[3] and localperm[3] == permissionfolder[3] or localperm[3] == "*" then
-							if negative then print("Negated "..v) return false end;
+							if negative then return false end;
 							return true;
 						end
 					else
-						if negative then print("Negated "..v) return false end;
+						if negative then return false end;
 						return true;
 					end
 				end

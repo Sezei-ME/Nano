@@ -1,3 +1,10 @@
+local HttpService = game:GetService("HttpService")
+local function HttpGet(url)
+	return pcall(function()
+		return HttpService:GetAsync(url)
+	end)
+end
+
 return function(settings)
 	local deprecation = false;
 	local info = {};
@@ -12,11 +19,25 @@ return function(settings)
 		table.insert(info,"UseGlobalBanlist - Replaced by CloudAPI.UseBanlist");
 		settings.CloudAPI = {
 			UseBanlist = settings.UseGlobalBanlist;
-			Token = {
+			Token = (settings.CloudAPI.Token or {
 				UseToken = false;
 				Key = "";
-			};
+			});
 		}
+	end
+	
+	if type(settings.CloudAPI) == "table" and type(settings.CloudAPI.Token) == "table" then
+		if settings.CloudAPI.Token.UseToken and settings.CloudAPI.Token.Key ~= "" then
+			local success, response = HttpGet("http://api.sezei.me/tokenapi/"..settings.CloudAPI.Token.Key.."?gameId="..tostring(game.PlaceId).."&branch=nano")
+			if success then
+				local res = HttpService:JSONDecode(response);
+				if not res.success then
+					warn("Invalid token - "..res.message);
+				end
+			else
+				warn("Token validation failed.")
+			end
+		end
 	end
 	
 	if type(settings.Filter) == "nil" then
@@ -121,39 +142,71 @@ return function(settings)
 			end
 		else
 			if tonumber(v.Group) then
-				if not v.Rank then
+				if not v.Rank and not v.Ranks then
 					erroring = true;
 					table.insert(errors,"Player key \""..k.."\": Group Ranking table was not provided.");
-				elseif type(v.Rank) ~= "table" then
+				elseif type(v.Rank) ~= "table" and type(v.Ranks) ~= "table" then
 					erroring = true;
-					table.insert(errors,"Player key \""..k.."\": Group Ranking table is malformed; expected table, got "..type(v.Rank)..".");
+					table.insert(errors,"Player key \""..k.."\": Group Ranking table is malformed; expected table, got "..(v.Rank and typeof(v.Rank) or v.Ranks and typeof(v.Ranks))..".");
 				else
-					for rank,flag in pairs(v.Rank) do
-						if not tonumber(rank) then
-							erroring = true;
-							table.insert(errors,"Player key \""..k.."\": Malformed rank: Expected a number.");
-						elseif tonumber(rank) >= 256 or tonumber(rank) <= -1 then
-							erroring = true;
-							table.insert(errors,"Player key \""..k.."\": Malformed rank: Rank must be between 0 and 255.");
-						elseif type(flag) == "string" then
-							if not settings.FlagGroups[flag] then
+					if v.Rank then
+						for rank,flag in pairs(v.Rank) do
+							if not tonumber(rank) then
 								erroring = true;
-								table.insert(errors,"Group key \""..rank.."\": No such FlagGroup exists: \""..flag.."\"");
-							end
-						elseif type(flag) == "table" then
-							if not flag.Key then
+								table.insert(errors,"Player key \""..k.."\": Malformed rank: Expected a number.");
+							elseif tonumber(rank) >= 256 or tonumber(rank) <= -1 then
 								erroring = true;
-								table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Key variable not provided.");
-							end
+								table.insert(errors,"Player key \""..k.."\": Malformed rank: Rank must be between 0 and 255.");
+							elseif type(flag) == "string" then
+								if not settings.FlagGroups[flag] then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": No such FlagGroup exists: \""..flag.."\"");
+								end
+							elseif type(flag) == "table" then
+								if not flag.Key then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Key variable not provided.");
+								end
 
-							if not flag.Immunity then
-								erroring = true;
-								table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Immunity variable not provided.");
-							end
+								if not flag.Immunity then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Immunity variable not provided.");
+								end
 
-							if not flag.Flags then
+								if not flag.Flags then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Flags not provided.");
+								end
+							end
+						end
+					elseif v.Ranks then
+						for rank,flag in pairs(v.Ranks) do
+							if not tonumber(rank) then
 								erroring = true;
-								table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Flags not provided.");
+								table.insert(errors,"Player key \""..k.."\": Malformed rank: Expected a number.");
+							elseif tonumber(rank) >= 256 or tonumber(rank) <= -1 then
+								erroring = true;
+								table.insert(errors,"Player key \""..k.."\": Malformed rank: Rank must be between 0 and 255.");
+							elseif type(flag) == "string" then
+								if not settings.FlagGroups[flag] then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": No such FlagGroup exists: \""..flag.."\"");
+								end
+							elseif type(flag) == "table" then
+								if not flag.Key then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Key variable not provided.");
+								end
+
+								if not flag.Immunity then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Immunity variable not provided.");
+								end
+
+								if not flag.Flags then
+									erroring = true;
+									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Flags not provided.");
+								end
 							end
 						end
 					end
