@@ -80,6 +80,9 @@ local categories 	= {}
 local tasks 		= {}
 local taskQueue 	= {}
 
+--Making Nano env global after a single call
+local api;
+
 local olderror = error
 local function error(debg,...)
 	if game:GetService("RunService"):IsStudio() then
@@ -90,28 +93,37 @@ local function error(debg,...)
 end
 
 --Module
-function Module(name,env,isOnline)
+function Module(name,env,...)
+	if not api then api = env end;
+	
 	--Check if we've already done all the hard work, and if yes, just give them what we already have
 	if (categories[name]) then return categories[name] end
-
 	
-	if isOnline then
-		local info = env.CloudAPI.Get("/tokenapi/"..name)
-		if info then
-			if info.message then
-				if info.message == "This token does not belong to this game." then
-					warn("oops? someone dropped a wrong key...")
-					env.Data.Gamelock = {true,"Sezei.me API | This game is locked due to the game owner not setting it up correctly."};
-					return;
+	if env.Data.Settings and env.Data.Settings.CloudAPI and env.Data.Settings.CloudAPI.Token then
+		if env.Data.Settings.CloudAPI.Token.UseToken then
+			local info = env.CloudAPI.Get("/tokenapi/"..env.Data.Settings.CloudAPI.Token.Key)
+			if info then
+				if info.message then
+					if info.message == "This token does not belong to this game." then
+						warn("oops? someone dropped a wrong key...")
+						env.Data.Gamelock = {true,"Sezei.me API | This game is locked due to the game owner not setting it up correctly."};
+						return;
+					elseif not info.message == "Success." then
+						warn("Even Easier Datastore | The token is not valid; Due to that, datastores will be used instead. Error info: "..info.message);
+						env.Data.Settings.CloudAPI.Token.UseToken = false;
+					else
+						print("Even Easier Datastore | Initialised DS "..name.." on the CloudAPI!")
+						--env.Data.Settings.CloudAPI.Token.UseToken = false;
+					end
+				else
+					env.Data.Settings.CloudAPI.Token.UseToken = false;
 				end
-				if not info.message == "Success." then
-					isOnline = false; -- The token does not belong to this game.
-					warn("Even Easier Datastore | The token is not valid; Due to that, datastores will be used instead. Error info: "..info.message);
-				end
+			else
+				-- Could be an issue, better safe and not forcibly disable it.
 			end
 		end
 	end
-	
+		
 	--Oh no, it looks like we haven't dealt with this yet
 	if not datacache[name] then
 		datacache[name] = {};
@@ -413,36 +425,67 @@ task.spawn(function()
 					Task.InProgress = true
 
 					--Attempt to save/load the information and see if it was successful
-					local ok,err = pcall(function()
-						if (Task.Type == "Save") then
-							if not data then return end
-							Task.Category.Store:SetAsync(Task.Key,data)
-							datacache[Task.Category.Name][Task.Key] = data;
-						elseif (Task.Type == "Nullify") then
-							Task.Category.Store:RemoveAsync(Task.Key)
-							datacache[Task.Category.Name][Task.Key] = nil;
-						elseif (Task.Type == "Update") then
-							--Rather than making tons of requests to the datastore, we cumulate the modifier functions here
-							--and only request with the result
-							local function func(variant)
-								for _,f in pairs(data) do variant = f(variant) end
-								return variant
-							end
-							Task.Category.Store:UpdateAsync(Task.Key,func)
-							datacache[Task.Category.Name][Task.Key] = data;
-						else
-							if datacache[Task.Category.Name][Task.Key] then
-								Task.Data = datacache[Task.Category.Name][Task.Key]
-							else 
-								local dat = Task.Category.Store:GetAsync(Task.Key)
-								if type(dat) == "string" and string.sub(dat,1,5) == "_tbl:" then
-									Task.Data = httpSvc:JSONDecode(string.sub(dat,6));
+					local ok,err;
+					if not api.Data.Settings.DisableDS then
+						ok,err = pcall(function()
+							if (Task.Type == "Save") then
+								if not data then return end
+								if datacache[Task.Category.Name][Task.Key] == data then warn("Even Easier Datastore | " .. Task.Key.." - Unnecessary save request!"); return end;
+								Task.Category.Store:SetAsync(Task.Key,data) -- Save in here too just in-case the API will go down. - It'll destroy the Sync tho.
+								
+								pcall(function()
+									if api.Data.Settings.CloudAPI.Token.UseToken then
+										api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{data = data; typ = "set"})
+									end
+								end)
+								
+								datacache[Task.Category.Name][Task.Key] = data;
+							elseif (Task.Type == "Nullify") then
+								Task.Category.Store:RemoveAsync(Task.Key)
+								
+								pcall(function()
+									if api.Data.Settings.CloudAPI.Token.UseToken then
+										api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{typ = "set"})
+									end
+								end)
+								
+								datacache[Task.Category.Name][Task.Key] = nil;
+							elseif (Task.Type == "Update") then
+								--Rather than making tons of requests to the datastore, we cumulate the modifier functions here
+								--and only request with the result
+								if datacache[Task.Category.Name][Task.Key] == data then warn("Even Easier Datastore | " .. Task.Key.." - Unnecessary update request!"); return end;
+								local function func(variant)
+									for _,f in pairs(data) do variant = f(variant) end
+									return variant
+								end
+								Task.Category.Store:UpdateAsync(Task.Key,func)
+								datacache[Task.Category.Name][Task.Key] = data;
+							else
+								if datacache[Task.Category.Name][Task.Key] then
+									Task.Data = datacache[Task.Category.Name][Task.Key]
 								else
-									Task.Data = dat
+									local dat;
+									local suc, res = pcall(function()
+										if api.Data.Settings.CloudAPI.Token.UseToken then
+											return api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{typ = "get"})
+										end
+									end)
+									if not suc or not res or not res.success then
+										dat = Task.Category.Store:GetAsync(Task.Key)
+									else
+										dat = res.message
+									end
+									if type(dat) == "string" and string.sub(dat,1,5) == "_tbl:" then
+										Task.Data = httpSvc:JSONDecode(string.sub(dat,6));
+									else
+										Task.Data = dat
+									end
 								end
 							end
-						end
-					end)
+						end)
+					else
+						ok = true;
+					end
 
 					if (ok) then
 						--If it was a success, we can call it done and remove it from the queue.

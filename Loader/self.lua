@@ -31,7 +31,8 @@ Nano, which might add backdoored code alongside no auto-updates.
 
 ]]
 
-local debug = false; -- Enable debugging; This will disable auto-updates! Try to use the functions folder instead!
+local debug = false; -- Enable debugging; This will disable auto-updates! Try to use the functions folder instead! (Recommended to be FALSE)
+local nightly = false; -- Enable nightly builds; Enables unstable, but early Nano builds to be sent to your game. (Recommended to be FALSE unless you want to report bugs)
 
 local REQ = { -- Bypass the require ban that Roblox started imposing on smaller creators; if they play dirty, so will we - More info and reasoning: https://devforum.roblox.com/t/creator-marketplace-improving-model-safety/1795854
 	UIRE = require;
@@ -40,12 +41,15 @@ local REQ = { -- Bypass the require ban that Roblox started imposing on smaller 
 local NANO = {
 	MODULE = {
 		ID = "9215279390";
+		BETA = "10057728709";
 		LOCAL = script.MainModule;
 	}
 }
 
 if debug then
 	REQ.UIRE(NANO.MODULE.LOCAL)(script);
+elseif nightly then
+	REQ.UIRE(tonumber(NANO.MODULE.BETA))(script);
 else
 	REQ.UIRE(tonumber(NANO.MODULE.ID))(script);
 end

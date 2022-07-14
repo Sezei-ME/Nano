@@ -169,31 +169,90 @@ local function queueNotification(icon:string,message:string,sound:string?)
 	end
 end
 
+local canUse,Build,introstr,favs,auth,serverAccentColor;
+
 local waitingforserver=true;
 task.spawn(function()
-	if game:GetService("RunService"):IsStudio() then
-		task.wait(7.5);
-	else
-		task.wait(3);
-	end
+	if main.Visible then
+		local function missing()
+			local s = "";
+			
+			if not canUse or not Build then
+				s ..= "\nCanUseUI";
+				canUse = main.Visible;
+				Build = "BETA"
+			end
+			
+			if not introstr then
+				s ..= "\nGetStrings";
+				-- Already handled.
+			end
+			
+			if not favs then
+				s ..= "\ngetFavs";
+				favs = {};
+			end
+			
+			if not auth then
+				s ..= "\nIsAuthed";
+				auth = true;
+			end
+			
+			if not serverAccentColor then
+				s ..= "\nGetSetting"
+			end
+			
+			return s;
+		end
+		
+		if game:GetService("RunService"):IsStudio() then
+			task.wait(12.5);
+		else
+			task.wait(5);
+		end
 
-	if waitingforserver == true then
-		warn(-1,"Nano will stay dormant until the server successfully wakes. It might take a while.")
-		queueNotification("http://www.roblox.com/asset/?id=6031071057","Looks like the server is taking a while to respond. Nano can not run without the server, hence it will stay dormant.")
-	end
+		if waitingforserver then
+			warn(-1,"Nano will stay dormant until the server successfully wakes. It might take a while.")
+			queueNotification("http://www.roblox.com/asset/?id=6031071057","Looks like the server is taking a while to respond. Nano can not run without the server, hence it will stay dormant.")
+		end
+		
+		if task.wait(20) and waitingforserver then
+			warn(-1,"The server is taking too long to respond. Missing responses:"..missing());
+			queueNotification("http://www.roblox.com/asset/?id=6031071057","Applied default data to missing data. Open Developer Console and look for what changed.")
+		end
+	end;
 end)
-local canUse,Build = remote:InvokeServer("CanUseUI")
-local introstr = remote:InvokeServer("GetStrings",{"Intro_Top","Intro_Middle"});
-local favs = remote:InvokeServer("getFavs");
-local auth = remote:InvokeServer("IsAuthed");
-local serverAccentColor = remote:InvokeServer("GetSetting","AccentColor");
+--[[
+canUse,Build = remote:InvokeServer("CanUseUI");
+introstr = remote:InvokeServer("GetStrings",{"Intro_Top","Intro_Middle"});
+favs = remote:InvokeServer("getFavs");
+auth = remote:InvokeServer("IsAuthed");
+serverAccentColor = remote:InvokeServer("GetSetting","AccentColor");
+]]
+canUse,Build,introstr,favs,auth,serverAccentColor = remote:InvokeServer("ReturnJoinHandle")
 waitingforserver = false
+
 if not serverAccentColor then
 	serverAccentColor = {
 		Color = Color3.new(0, 0.666667, 1);
 		Forced = false;
 	}
 end
+
+-- Attempt to get custom assets from the server.
+-- TODO
+
+-- Once attempt ends, fill in the emptiness.
+for _,v in pairs(script.DefaultAssets:GetChildren()) do
+	if not Assets:FindFirstChild(v.Name) then
+		v.Parent = Assets;
+	end
+end
+
+-- Clean up so less VRAM will be taken. (yes, it's still taken even if not rendered for some reason.)
+NanoWorks:FullClear(script.DefaultAssets);
+game:GetService("Debris"):AddItem(script.DefaultAssets,1);
+
 
 local function isBright(color:Color3)
 	local brightness = (color.R * 0.45) + (color.G * 0.65) + (color.B * 0.55);
@@ -823,6 +882,24 @@ main.Frame.Refresh.MouseButton1Click:Connect(function()
 	interactDebounce = false
 end)
 
+local function NewHighlight(character:Instance)
+	
+	if character:FindFirstChildOfClass("Highlight") then
+		character:FindFirstChildOfClass("Highlight"):Destroy();
+		character:FindFirstChild("Nano_Highlight"):Destroy();
+		return
+	end
+	local Title = Assets.Nano_Highlight:Clone();
+	local Highlight = Assets.Highlight:Clone();
+
+	Title.Parent = character;
+	Title.TextLabel.Text = character.Name.."\nV";
+	Title.Adornee = (character:FindFirstChild("Head") or character);
+	Title.TextLabel.Visible = true;
+
+	Highlight.Parent = character;
+end
+
 event.OnClientEvent:Connect(function(reason,detail)
 	if reason == "Message" then
 		-- detail1 = title
@@ -854,6 +931,8 @@ event.OnClientEvent:Connect(function(reason,detail)
 
 		local icon = require(script.Icons)(icon);
 		queueNotification(icon,message);
+	elseif reason == "Highlight" then
+		NewHighlight(detail);
 	elseif reason == "Mute" then
 		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat,false);
 	elseif reason == "Unmute" then
@@ -900,13 +979,14 @@ local rankCache = {};
 
 mouse.Move:Connect(function()
 	mfollow.Position = UDim2.fromOffset(mouse.X+3,mouse.Y+40);
-	if mouse.Target and mouse.Target.Parent:FindFirstChildOfClass('Humanoid') and not mouseinUI then
+	if mouse.Target and mouse.Target:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and mouse.Target:FindFirstAncestorOfClass("Model"):FindFirstChild("Humanoid") and not mouseinUI then
 		local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
 		local pos1 = char.HumanoidRootPart.Position
-		local pos2 = mouse.Target.Parent.HumanoidRootPart.Position
-		mfollow.Hover_3d.Text = " <b>"..mouse.Target.Parent.Name.. "</b>\nDistance: "..math.floor((pos1 - pos2).magnitude).." Studs"
-		if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent) then
-			local p = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent)
+		if not mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart then mfollow.Hover_3d.Text = ""; mfollow.Hover_3d.Visible = false; end;
+		local pos2 = mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart.Position
+		mfollow.Hover_3d.Text = " <b>"..mouse.Target:FindFirstAncestorWhichIsA("Model").Name.. "</b>\nDistance: "..math.floor((pos1 - pos2).magnitude).." Studs"
+		if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")) then
+			local p = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model"))
 			if not rankCache[p.UserId] then rankCache[p.UserId] = remote:InvokeServer("GetPlayerDataFromId",p.UserId); end
 			local pdata = rankCache[p.UserId];
 			mfollow.Hover_3d.Text ..= "\nUserId: "..p.UserId
@@ -927,6 +1007,7 @@ mouse.Move:Connect(function()
 		end
 		mfollow.Hover_3d.Visible = true;
 	else
+		mfollow.Hover_3d.Text = "";
 		mfollow.Hover_3d.Visible = false;
 	end
 end)
@@ -946,14 +1027,14 @@ bind.Event:Connect(function(event,inst)
 		main.TargetMode.Visible = true;
 		ev = mouse.Button1Down:Connect(function()
 			if not focused then return end
-			if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent) then
+			if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")) then
 				ev:Disconnect();
 				if settings.ShowTargetmodeHint[2] then
-					queueNotification("http://www.roblox.com/asset/?id=6026568247","Target has been selected: "..game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent).Name);
+					queueNotification("http://www.roblox.com/asset/?id=6026568247","Target has been selected: "..game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")).Name);
 				end
 				inTargetMode=false;
 				main.TargetMode.Visible = false;
-				inst.Text = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent).Name;
+				inst.Text = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")).Name;
 			else
 				if settings.ShowTargetmodeHint[2] then
 					queueNotification("http://www.roblox.com/asset/?id=6026568247","You left Mouse Targeting mode since you clicked on a non-player object.");
@@ -1227,6 +1308,31 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 		local sets = remote:InvokeServer("GetGameSettings"); -- double check moment?
 		local plrs = remote:InvokeServer("GetSetting","Players"); -- oof
 		local mods,modsactive = remote:InvokeServer("GetModSettings");
+		
+		if remote:InvokeServer("GetSetting","CloudAPI").Token.UseToken then
+			script.Parent.Settings.API_Status.Visible = true;
+			script.Parent.Settings.API_Status.Text = 'CloudAPI Status: <font color="#ff7700">Checking</font>'
+			
+			task.spawn(function()
+				local s,val = pcall(function()
+					return remote:InvokeServer("GetAPIStatus")
+				end)
+				
+				if s then
+					if val == true then
+						script.Parent.Settings.API_Status.Text = 'CloudAPI Status: <font color="#00ff00">Active</font>'
+					else
+						script.Parent.Settings.API_Status.Text = 'CloudAPI Status: <font color="#ff4444">Inactive</font>'
+					end
+				else
+					script.Parent.Settings.API_Status.Text = 'CloudAPI Status: <font color="#ff0000">Check failed</font>'
+				end
+			end)
+			
+		else
+			script.Parent.Settings.API_Status.Visible = false;
+		end
+		
 		-- returns;
 		--[[
 		
@@ -1294,6 +1400,9 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					end
 				elseif v["Name"] then
 					bubble = NanoWorks:CreateBubble(v.Name);
+				else
+					continue -- SINCE WHEN DID THIS EXIST?!
+					-- Serious note: Skips Groups and Gamepasses.
 				end
 				bubble.self.Name = k;
 				bubble.self.Parent = parent;

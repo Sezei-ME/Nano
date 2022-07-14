@@ -7,22 +7,6 @@ local pingchecks = {};
 remote.Parent = game:GetService("ReplicatedStorage");
 event.Parent = game:GetService("ReplicatedStorage");
 
-task.spawn(function()
-	while task.wait(10) do
-		if env then
-			for k,v in pairs(pingchecks) do
-				local p = game:GetService("Players"):GetPlayerByUserId(k)
-				if p then
-					if v+30 < os.time() then
-						env.MCheat:AddScore(p,5,"Unstable connection to the Server (Non-cooperative Client)");
-						pingchecks[k] = os.time();
-					end
-				end
-			end
-		end
-	end
-end)
-
 return function(api)
 	if not env then env = api end;
 	api.Remote = remote;
@@ -80,25 +64,33 @@ return function(api)
 			pingchecks[player.UserId] = os.time();
 			local tck = task.wait();
 			local tps = 1/tck;
-			if tonumber(reason) and tonumber(reason) >= (math.clamp(1000*(tck/(1/60)),1000,1750)) then
+			--[[
+			if tonumber(reason) and tonumber(reason) >= 2500 then
 				if api.MCheat then
-					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is consistantly high)");
+					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping is abnormally high; Last one: "..math.round(reason).."ms)");
 				end
-			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= (math.clamp(350*(tck/(1/60)),350,700)) then
+			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= 750 then
 				if api.MCheat then
-					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping delta is very high)");
+					api.MCheat:AddScore(player,1,"Unstable connection to the Server (Ping difference is abnormally high; Last one: "..math.round(math.abs(api.playerPings[player.UserId] - reason)).."ms)");
 				end
 			end
 			
 			if api.MCheat and api.MCheat.Storage and api.MCheat.Storage[player.UserId] and api.MCheat.Storage[player.UserId][1] >= 10 and not api.MCheat.Storage[player.UserId].Notified then
 				api.MCheat.Storage[player.UserId].Notified = true;
 				api.MetaPlayer(api,player):Notify({"bulb","Your connection to the server is unstable. This might get you kicked!"})
+			end]]
+			
+			if reason >= 2500 then
+				api.Bind:Fire("AbnormalPing",player,math.round(reason));
+			elseif api.playerPings[player.UserId] and math.abs(api.playerPings[player.UserId] - reason) >= 750 then
+				api.Bind:Fire("UnstablePing",player,math.round(math.abs(api.playerPings[player.UserId] - reason)));
 			end
+			
 			
 			api.playerPings[player.UserId] = reason
 			return tostring(api.BetterBasics.math.fround(tps,3)) .. " (" ..(game:GetService("RunService"):IsStudio() and "Studio)" or "Live)")
 		elseif key == "GetSetting" then
-			if reason == "CloudAPI" then return {UseBanlist = api.Data.Settings.CloudAPI.UseBanlist; Token = {UseToken = false; Key = ""}} end; -- Don't send REAL cloudAPI data for security reasons.
+			if reason == "CloudAPI" then return {UseBanlist = api.Data.BaseSettings.CloudAPI.UseBanlist; Token = {UseToken = api.Data.BaseSettings.CloudAPI.UseToken; Key = "REDACTED"}} end; -- Don't send REAL cloudAPI data for security reasons.
 			return api.Data.Settings[reason];
 		elseif key == "GetGameSettings" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
@@ -140,6 +132,8 @@ return function(api)
 				api.MetaPlayer(api,player):Notify({"bulb","You set \""..reason[1].."\" to "..tostring(reason[2])})
 				return -- return after the save
 			end
+		elseif key == "GetAPIStatus" then
+			return api.BetterBasics.bool.tobool(api.CloudAPI.Get('/redefinea'));
 		elseif key == "SetPlayerData" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
 				local plruserid = (api.Data.Settings.Players[reason[1]] and (api.Data.Settings.Players[reason[1]].UserId or api.Data.Settings.Players[reason[1]].Name and game:GetService("Players"):GetUserIdFromNameAsync(api.Data.Settings.Players[reason[1]].Name)))
@@ -175,8 +169,9 @@ return function(api)
 			end
 		elseif key == "NewPlayerData" then
 			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
-				for akey,group in pairs(api.Data.Settings.Players) do
-					if (group and (group.UserId or group.Name and game:GetService("Players"):GetUserIdFromNameAsync(group.Name))) == tonumber(reason) or game:GetService("Players"):GetUserIdFromNameAsync(reason) then
+				for akey, ranked in pairs(api.Data.Settings.Players) do
+					-- actual fix (it was literally just missing the parentheses)
+					if (ranked and (ranked.UserId or ranked.Name and game:GetService("Players"):GetUserIdFromNameAsync(ranked.Name))) == (tonumber(reason) or game:GetService("Players"):GetUserIdFromNameAsync(reason)) then
 						api.MetaPlayer(api,player):Notify({"bulboff","New key creation for "..reason.." was prevented: User already exists."});
 						return
 					end
@@ -190,7 +185,8 @@ return function(api)
 					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
 					api.MetaPlayer(api,player):Notify({"bulb","You created a new key for "..plruserid..". Refresh the settings to edit the new team member."});
 					if game:GetService("Players"):GetPlayerByUserId(plruserid) then
-						api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned an administration key which will take effect on server shutdown."});
+						api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned an administration key which will take effect on rejoin."});
+						env.Ingame.Admins[plruserid] = {Key = "Newbie"; Immunity = 1; Flags = "Moderation.Respawn"; UI = true; Chat = true}
 					end
 					return -- return after the save for quicker thing
 				else
@@ -199,7 +195,7 @@ return function(api)
 						api.Store():Save("Nano_Settings",api.Data.Settings):wait();
 						api.MetaPlayer(api,player):Notify({"bulb","You added "..plruserid.." to group \""..anotherreason.."\"."});
 						if game:GetService("Players"):GetPlayerByUserId(plruserid) then
-							api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned into group \""..anotherreason.."\". Please rejoin."});
+							api.MetaPlayer(api,game:GetService("Players"):GetPlayerByUserId(plruserid)):Notify({"celebrate","Welcome to the team! You were assigned into group \""..anotherreason.."\" which will take effect on rejoin."});
 							env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.FlagGroups[anotherreason];
 						end
 						return -- return after the save for quicker thing
@@ -221,7 +217,7 @@ return function(api)
 			local command = string.split(reason," ")[1]
 			if api.Data.Commands[command] then
 				-- UI, Player, Command, Args
-				local dat = api.ChatCommand(api,player,api.Ingame.Admins[player.UserId],api.Data.Commands[command],reason,true);
+				local dat = api.UICommand(api,player,api.Data.Commands[command],reason,true);
 				if dat then
 					return dat;
 				elseif type(dat) == "nil" then
@@ -278,6 +274,9 @@ return function(api)
 			end
 			api.Store():Save("setting_"..player.UserId.."_"..reason[1],reason[2]):wait();
 			ev:Fire("SettingChanged",player,reason[1],reason[2])
+		elseif key == "ReturnJoinHandle" then
+			
+			return api.GetPlayerHasPermission(api,api.Ingame.Admins[player.UserId],"UI"), api.Build(), {api.Strings["Intro_Top"],api.Strings["Intro_Middle"]}, api.Store():Load("favs_"..player.UserId):wait().Data or {}, api.CloudAPI.CheckAuth(player), api.Data.Settings["AccentColor"];
 		elseif api.RemoteKeys and api.RemoteKeys[key] then
 			pcall(function()
 				api.RemoteKeys[key](player,reason)

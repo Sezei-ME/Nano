@@ -1,9 +1,12 @@
 local ids = {}
 local plrs = {}
 
-local senv;
+local senv; -- Stored Environment
 
 local function CreateMeta(env:any, plr:Player?)
+	-- if it's suddenly just a player rather than the full env (requires the env to be sent in the first place)
+	if not senv and typeof(env) == "Instance" then return nil end;
+	if senv and typeof(env) == "Instance" then plr = env end;
 	senv = env;
 	if not plr then return {} end;
 	if plrs[plr.UserId] then return plrs[plr.UserId] end;
@@ -22,14 +25,14 @@ local function CreateMeta(env:any, plr:Player?)
 	player.Muted = false;
 	player.MuteLength = 0;
 
-	env.Bind:Fire("MetaPlayerCreated",plr.UserId);
+	senv.Bind:Fire("MetaPlayerCreated",plr.UserId);
 
 	function player:HasPermission(permissionneeded)
-		return env.GetPlayerHasPermission(env,env.GetPlayerData(env,player.self),permissionneeded)
+		return senv.GetPlayerHasPermission(senv,senv.GetPlayerData(senv,player.self),permissionneeded)
 	end
 
 	function player:GetFlagGroup()
-		return env.Ingame.Admins[player.UserId].FlagGroup
+		return senv.Ingame.Admins[player.UserId].FlagGroup
 	end
 
 	function player:Kick(...)
@@ -55,34 +58,39 @@ local function CreateMeta(env:any, plr:Player?)
 	end
 
 	function player:GetData()
-		return env.GetPlayerData(player.UserId);
+		return senv.GetPlayerData(player.UserId);
 	end
 
 	function player:Message(data)
 		if not player.InGame then return end;
-		env.Event:FireClient(player.self,"Message",data);
+		senv.Event:FireClient(player.self,"Message",data);
 	end
 
 	function player:Hint(data)
 		if not player.InGame then return end;
-		env.Event:FireClient(player.self,"Hint",data);
+		senv.Event:FireClient(player.self,"Hint",data);
 	end
 
 	function player:Notify(data)
 		if not player.InGame then return end;
-		env.Event:FireClient(player.self,"Notify",data);
+		senv.Event:FireClient(player.self,"Notify",data);
+	end
+	
+	function player:Highlight(instance)
+		if not player.InGame then return end;
+		senv.Event:FireClient(player.self,"Highlight",instance); -- Requires to be a path that is in the client too tho!
 	end
 
 	function player.Data:Set(key,value)
-		env.Store():Save(player.UserId.."_"..key,value):wait();
+		senv.Store():Save(player.UserId.."_"..key,value):wait();
 	end
 
 	function player.Data:Get(key)
-		return env.Store():Load(player.UserId.."_"..key):wait().Data;
+		return senv.Store():Load(player.UserId.."_"..key):wait().Data;
 	end
 
 	function player.Data:Delete(key)
-		env.Store():Nullify(player.UserId.."_"..key):wait();
+		senv.Store():Nullify(player.UserId.."_"..key):wait();
 	end
 
 	function player:Mute(reason,length)
@@ -91,7 +99,7 @@ local function CreateMeta(env:any, plr:Player?)
 		player.Muted = true;
 		player.MuteLength = length;
 		player:Notify({"bulb","You have been muted for " .. tostring(math.floor(length/60)) .. " minutes! Reason: " ..reason });
-		env.Event:FireClient(player.self,"Mute");
+		senv.Event:FireClient(player.self,"Mute");
 	end
 
 	function player:Unmute(reason)
@@ -99,7 +107,7 @@ local function CreateMeta(env:any, plr:Player?)
 		player.Muted = false;
 		player.MuteLength = 0;
 		player:Notify({"bulb","You have been unmuted. Reason: " ..reason });
-		env.Event:FireClient(player.self,"Unmute");
+		senv.Event:FireClient(player.self,"Unmute");
 	end
 
 	table.insert(plrs,player);

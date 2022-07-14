@@ -43,7 +43,9 @@ local function FindPlayers(Runner,Name)
 	return matches
 end
 
-return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
+return function(env,player,commanddata,fullmsg,ignorechatperm)
+	local playerdata = env.GetPlayerData(env,player);
+	
 	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then -- Chat has been used while it's disabled;
 		return;
 	end
