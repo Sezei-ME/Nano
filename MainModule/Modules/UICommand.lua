@@ -24,21 +24,6 @@ local function FindPlayers(Runner,Name)
 				matched = true;
 			end
 		end
-		
-		if not matched then
-			if string.lower(Name) == "me" then
-				matches[#matches+1] = Runner
-				matched = true;
-			elseif string.lower(Name) == "all" then
-				matches[#matches+1] = v
-				matched = true;
-			elseif string.lower(Name) == "others" then
-				if v.Name ~= Runner.Name then
-					matches[#matches+1] = v
-					matched = true;
-				end
-			end
-		end
 	end
 	return matches
 end
@@ -98,9 +83,9 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 						fields[field.Internal] = 0;
 					end
 				elseif string.lower(field.Type) == "boolean" then
-					if string.lower(v) == "true" or string.lower(v) == "yes" or string.lower(v) == "1" then
+					if string.lower(v) == "true" then
 						fields[field.Internal] = true;
-					elseif string.lower(v) == "false" or string.lower(v) == "no" or string.lower(v) == "0" then
+					elseif string.lower(v) == "false" then
 						fields[field.Internal] = false;
 					end
 				elseif string.lower(field.Type) == "color" then

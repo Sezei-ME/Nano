@@ -126,128 +126,129 @@ end
 
 local handlequeue = {};
 function handleJoin(p)
-	local p:Player = p;
-	local agr = script.NanoUI:Clone();
-	script.ErrorCodes:Clone().Parent = agr;
-	task.spawn(function() -- Check bans in the background while the rest is being handled.
-		if env.Ingame.Bans[p.UserId] then
-			local baninfo = env.Ingame.Bans[p.UserId];
-			local origintime = baninfo[1];
-			local bantime = baninfo[2];
-			local banreason = baninfo[3];
-			local moderator = baninfo[4];
+	local success, err = pcall(function()
+		local p:Player = p;
+		local agr = script.NanoUI:Clone();
+		script.ErrorCodes:Clone().Parent = agr;
+		task.spawn(function() -- Check bans in the background while the rest is being handled.
+			if env.Ingame.Bans[p.UserId] then
+				local baninfo = env.Ingame.Bans[p.UserId];
+				local origintime = baninfo[1];
+				local bantime = baninfo[2];
+				local banreason = baninfo[3];
+				local moderator = baninfo[4];
 
-			if bantime == math.huge then
-				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
-				
-				p:Kick("You are server-banned for \""..banreason.."\". This ban is active until the server will shutdown.");
-				return;
+				if bantime == math.huge then
+					env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+
+					p:Kick("You are server-banned for \""..banreason.."\". This ban is active until the server will shutdown.");
+					return;
+				end
+
+				if os.time() <= origintime + bantime then
+					env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+
+					p:Kick("You are server-banned for \""..banreason.."\". Estimated time left: ".. tostring( math.abs( os.time() - (origintime + bantime) ) / 60 ) .." minutes." );
+					return;
+				end
 			end
 
-			if os.time() <= origintime + bantime then
-				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
-				
-				p:Kick("You are server-banned for \""..banreason.."\". Estimated time left: ".. tostring( math.abs( os.time() - (origintime + bantime) ) / 60 ) .." minutes." );
-				return;
+			local baninfo = env.Store():Load("ban_"..tostring(p.UserId)):wait().Data;
+			if baninfo then
+				local origintime = baninfo[1];
+				local bantime = baninfo[2];
+				local banreason = baninfo[3];
+				local moderator = baninfo[4];
+
+				if bantime == math.huge then
+					env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+
+					p:Kick("You are game-banned for \""..banreason.."\". This ban is permanent.");
+					return;
+				end
+
+				if os.time() <= math.abs(origintime + bantime) then
+					env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
+
+					p:Kick("You are game-banned for \""..banreason.."\". Estimated time left: ".. tostring( math.abs( os.time() - (origintime + bantime) ) / 60 ) .." minutes." );
+					return;
+				end
 			end
-		end
 
-		local baninfo = env.Store():Load("ban_"..tostring(p.UserId)):wait().Data;
-		if baninfo then
-			local origintime = baninfo[1];
-			local bantime = baninfo[2];
-			local banreason = baninfo[3];
-			local moderator = baninfo[4];
-
-			if bantime == math.huge then
-				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
-				
-				p:Kick("You are game-banned for \""..banreason.."\". This ban is permanent.");
-				return;
-			end
-
-			if os.time() <= math.abs(origintime + bantime) then
-				env.Bind:Fire("JoinWhileBanned",p.UserId,banreason);
-				
-				p:Kick("You are game-banned for \""..banreason.."\". Estimated time left: ".. tostring( math.abs( os.time() - (origintime + bantime) ) / 60 ) .." minutes." );
-				return;
-			end
-		end
-
-		if env.Data.Settings.CloudAPI.UseBanlist then
-			local suc,dat = pcall(env.CloudAPI.Get,"/redefinea/banlist/"..p.UserId);
-			if suc then
-				if dat then
-					if dat.success then
-						if dat.active and dat.active == true then
-							env.Bind:Fire("JoinWhileBanned",p.UserId,dat.reason);
-							p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..dat.reason)
-						else
-							task.spawn(function()
-								local suc,ndat = pcall(env.CloudAPI.ListenForChange,"/redefinea/banlist/"..p.UserId,dat);
-								if suc then
-									repeat task.wait(120) until ndat.Data or not p;
-									ndat:Cancel();
-									ndat = ndat.Data;
-									if ndat and ndat.success and ndat.active and ndat.active == true then
-										env.Bind:Fire("JoinWhileBanned",p.UserId,ndat.reason);
-										p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..ndat.reason)
-										return
+			if env.Data.Settings.CloudAPI.UseBanlist then
+				local suc,dat = pcall(env.CloudAPI.Get,"/redefinea/banlist/"..p.UserId);
+				if suc then
+					if dat then
+						if dat.success then
+							if dat.active and dat.active == true then
+								env.Bind:Fire("JoinWhileBanned",p.UserId,dat.reason);
+								p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..dat.reason)
+							else
+								task.spawn(function()
+									local suc,ndat = pcall(env.CloudAPI.ListenForChange,"/redefinea/banlist/"..p.UserId,dat);
+									if suc then
+										repeat task.wait(120) until ndat.Data or not p;
+										ndat:Cancel();
+										ndat = ndat.Data;
+										if ndat and ndat.success and ndat.active and ndat.active == true then
+											env.Bind:Fire("JoinWhileBanned",p.UserId,ndat.reason);
+											p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..ndat.reason)
+											return
+										end
 									end
-								end
-							end)
+								end)
+							end
 						end
 					end
+				else
+					env.warn(4, "Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
 				end
-			else
-				env.warn(4, "Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
+			end
+
+			if env.Data.Gamelocked then
+				if env.Data.Gamelocked[1] == true then
+					env.Bind:Fire("JoinWhileBanned",p.UserId,"Server is locked");
+					p:Kick(env.Data.Gamelocked[2]);
+				end
+			end
+		end)
+
+		if game.CreatorType == Enum.CreatorType.User then
+			if p.UserId == game.CreatorId then
+				env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Game Owner"; Immunity = 255; Flags = "*"; UI = true; Chat = true}};
+			end
+		elseif game.CreatorType == Enum.CreatorType.Group then
+			if p:GetRankInGroup(game.CreatorId) == 255 then
+				env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Game Owner"; Immunity = 255; Flags = "*"; UI = true; Chat = true}};
 			end
 		end
 
-		if env.Data.Gamelocked then
-			if env.Data.Gamelocked[1] == true then
-				env.Bind:Fire("JoinWhileBanned",p.UserId,"Server is locked");
-				p:Kick(env.Data.Gamelocked[2]);
-			end
-		end
-	end)
+		-- Better Priority Thing (BETA_2B); Defined Users -> Groups -> Gamepasses 
 
-	if game.CreatorType == Enum.CreatorType.User then
-		if p.UserId == game.CreatorId then
-			env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Game Owner"; Immunity = 255; Flags = "*"; UI = true; Chat = true}};
-		end
-	elseif game.CreatorType == Enum.CreatorType.Group then
-		if p:GetRankInGroup(game.CreatorId) == 255 then
-			env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Game Owner"; Immunity = 255; Flags = "*"; UI = true; Chat = true}};
-		end
-	end
-	
-	-- Better Priority Thing (BETA_2B); Defined Users -> Groups -> Gamepasses 
-	
-	local groups = {};
-	local gamepasses = {};
-	
-	if not env.Ingame.Admins[p.UserId] then
-		for key,v in pairs(env.Data.Settings.Players) do
-			if v["UserId"] then
-				if v["UserId"] == p.UserId then
-					buildRankTable(p,v,key);
-					break;
-				end
-			elseif v["Name"] then
-				if v["Name"] == p.Name then
-					buildRankTable(p,v,key);
-					break;
-				end
-			elseif v["Gamepass"] then
-				table.insert(gamepasses,v);
+		local groups = {};
+		local gamepasses = {};
+
+		if not env.Ingame.Admins[p.UserId] then
+			for key,v in pairs(env.Data.Settings.Players) do
+				if v["UserId"] then
+					if v["UserId"] == p.UserId then
+						buildRankTable(p,v,key);
+						break;
+					end
+				elseif v["Name"] then
+					if v["Name"] == p.Name then
+						buildRankTable(p,v,key);
+						break;
+					end
+				elseif v["Gamepass"] then
+					table.insert(gamepasses,v);
 				--[[
 				if game:GetService("MarketplaceService"):UserOwnsGamePassAsync(p.UserId,v["Gamepass"]) then
 					buildRankTable(p,v,key);
 					break;
 				end]]
-			elseif v["Group"] then
-				table.insert(groups,v);
+				elseif v["Group"] then
+					table.insert(groups,v);
 				--[[
 				local rank = p:GetRankInGroup(tonumber(v["Group"]));
 				if not v["Rank"] then
@@ -262,91 +263,100 @@ function handleJoin(p)
 						end
 					end
 				end]]
-			end
-		end;
-	end
-	
-	-- If not admin; Check groups.
-	if not env.Ingame.Admins[p.UserId] then
-		for key,v in pairs(groups) do
-			local rank = p:GetRankInGroup(tonumber(v["Group"]));
-			if not v["Rank"] then
-				env.warn(2,"Malformed Settings: 'Group' flags require a rank table.")
-			elseif type(v["Rank"]) ~= "table" then
-				env.warn(2,"Nano | Malformed Settings: 'Rank' flag must be a table type.")
-			else
-				if v["Rank"] then
-					for rnk,vv in pairs(v["Rank"]) do
-						if rank == tonumber(rnk) then
-							buildGroupTable(p,vv,rnk);
-							break;
-						end
-					end
-				elseif v["Ranks"] then
-					for rnk,vv in pairs(v["Ranks"]) do 
-						if rank == tonumber(rnk) then
-							buildGroupTable(p,vv,rnk);
-							break;
-						end
-					end
 				end
-			end
+			end;
 		end
-	end
-	
-	-- If STILL not admin; Check gamepasses.
-	if not env.Ingame.Admins[p.UserId] then
-		for key,v in pairs(gamepasses) do
-			if game:GetService("MarketplaceService"):UserOwnsGamePassAsync(p.UserId,v["Gamepass"]) then
-				buildRankTable(p,v,key);
-				break;
-			end
-		end
-	end
-	
-	-- Give up and give the Non-Admin key.
-	if not env.Ingame.Admins[p.UserId] then
-		env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Non-Admin"; Immunity = 0; Flags = ""; UI = false; Chat = false}};
-	end
-	
-	if not env.Ingame.Admins[p.UserId].FlagGroup.UI then
-		agr.Main.Visible = false;
-		agr.MouseFollow.Visible = false;
-	end
 
-	local function handleMsg(msg)
-		if string.sub(msg,1,#env.Data.Settings.ChatCommands.Prefix) == env.Data.Settings.ChatCommands.Prefix then
-			local command = string.split(msg," ")[1]
-			command = string.lower(string.sub(command,#env.Data.Settings.ChatCommands.Prefix+1))
-			if env.Data.Commands[command] then
-				local s,f = pcall(function()
-					env.ChatCommand(env,p,env.Ingame.Admins[p.UserId],env.Data.Commands[command],msg);
-				end)
-				if not s then
-					env.Notify(p,{"bug","An error has occured with the command: "..f})
+		-- If not admin; Check groups.
+		if not env.Ingame.Admins[p.UserId] then
+			for key,v in pairs(groups) do
+				local rank = p:GetRankInGroup(tonumber(v["Group"]));
+				if not v["Rank"] then
+					env.warn(2,"Malformed Settings: 'Group' flags require a rank table.")
+				elseif type(v["Rank"]) ~= "table" then
+					env.warn(2,"Nano | Malformed Settings: 'Rank' flag must be a table type.")
+				else
+					if v["Rank"] then
+						for rnk,vv in pairs(v["Rank"]) do
+							if rank == tonumber(rnk) then
+								buildGroupTable(p,vv,rnk);
+								break;
+							end
+						end
+					elseif v["Ranks"] then
+						for rnk,vv in pairs(v["Ranks"]) do 
+							if rank == tonumber(rnk) then
+								buildGroupTable(p,vv,rnk);
+								break;
+							end
+						end
+					end
 				end
 			end
 		end
-	end
-	
-	agr.Parent = p.PlayerGui;
-	agr.MainHandler.Disabled = false;
-	
-	p.Chatted:Connect(function(msg)
-		handleMsg(msg);
-	end)
-	
-	env.Bind:Fire("SuccessfulJoin",p.UserId);
-	
-	if env.Data.Settings.Intro.Enabled then
-		if env.Data.Settings.Intro.AdminOnly then
-			if env.Ingame.Admins[p.UserId].FlagGroup.Flags ~= "" then
+
+		-- If STILL not admin; Check gamepasses.
+		if not env.Ingame.Admins[p.UserId] then
+			for key,v in pairs(gamepasses) do
+				if game:GetService("MarketplaceService"):UserOwnsGamePassAsync(p.UserId,v["Gamepass"]) then
+					buildRankTable(p,v,key);
+					break;
+				end
+			end
+		end
+
+		-- Give up and give the Non-Admin key.
+		if not env.Ingame.Admins[p.UserId] then
+			env.Ingame.Admins[p.UserId] = {FlagGroup = {Key = "Non-Admin"; Immunity = 0; Flags = ""; UI = false; Chat = false}};
+		end
+
+		if not env.Ingame.Admins[p.UserId].FlagGroup.UI then
+			agr.Main.Visible = false;
+			agr.MouseFollow.Visible = false;
+		end
+
+		local function handleMsg(msg)
+			if string.sub(msg,1,#env.Data.Settings.ChatCommands.Prefix) == env.Data.Settings.ChatCommands.Prefix then
+				local command = string.split(msg," ")[1]
+				command = string.lower(string.sub(command,#env.Data.Settings.ChatCommands.Prefix+1))
+				if env.Data.Commands[command] then
+					local s,f = pcall(function()
+						env.ChatCommand(env,p,env.Ingame.Admins[p.UserId],env.Data.Commands[command],msg);
+					end)
+					if not s then
+						env.Notify(p,{"bug","An error has occured with the command: "..f})
+					end
+				end
+			end
+		end
+
+		agr.Parent = p.PlayerGui;
+		agr.MainHandler.Disabled = false;
+
+		p.Chatted:Connect(function(msg)
+			handleMsg(msg);
+		end)
+
+		env.Bind:Fire("SuccessfulJoin",p.UserId);
+
+		if env.Data.Settings.Intro.Enabled then
+			if env.Data.Settings.Intro.AdminOnly then
+				if env.Ingame.Admins[p.UserId].FlagGroup.Flags ~= "" then
+					env.Intro(p)
+				end
+			else
 				env.Intro(p)
 			end
-		else
-			env.Intro(p)
 		end
+	end)
+	
+	if not success then
+		warn("Failed to handle player "..p.Name.." with error \""..err.."\"; Retrying in 2 seconds");
+		task.wait(2);
+		return handleJoin(p);
 	end
+	
+	return true;
 end
 
 local commandenv = {}; -- TODO : Make a 'secure' env variable so external modules won't be able to interfere with the real environment (preferably before Beta 3)
@@ -355,8 +365,10 @@ task.spawn(function()
 	while task.wait() do
 		if loaded then
 			if handlequeue[1] then
-				handleJoin(game:GetService("Players"):GetPlayerByUserId(handlequeue[1]));
-				table.remove(handlequeue,1);
+				local success = handleJoin(game:GetService("Players"):GetPlayerByUserId(handlequeue[1]));
+				if success then
+					table.remove(handlequeue,1);
+				end
 			end
 		end
 	end

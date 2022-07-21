@@ -75,7 +75,7 @@ local function CreateMeta(env:any, plr:Player?)
 		if not player.InGame then return end;
 		senv.Event:FireClient(player.self,"Notify",data);
 	end
-	
+
 	function player:Highlight(instance)
 		if not player.InGame then return end;
 		senv.Event:FireClient(player.self,"Highlight",instance); -- Requires to be a path that is in the client too tho!
