@@ -3,7 +3,7 @@ local ds = nil;
 local TextService = game:GetService("TextService")
 local env = {
 	InternalBuild = "BETA_PRE3#5";
-	TrueBuild = 56; -- QA_BUILD[n]
+	TrueBuild = 57; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
 	Ingame = {Admins = {}; Bans = {}; };

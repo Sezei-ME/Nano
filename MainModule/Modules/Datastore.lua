@@ -471,13 +471,10 @@ task.spawn(function()
 									end)
 									if not suc or not res or not res.success then
 										dat = Task.Category.Store:GetAsync(Task.Key)
-										
-										if res.message == "This token does not belong to this game." then
-											-- oh no lol
-											api.Data.Gamelocked = {true,"This game is disabled due to an API issue."}
-										end
 									else
-										dat = res.message
+										if res then
+											dat = res.message
+										end
 									end
 									if type(dat) == "string" and string.sub(dat,1,5) == "_tbl:" then
 										Task.Data = httpSvc:JSONDecode(string.sub(dat,6));
