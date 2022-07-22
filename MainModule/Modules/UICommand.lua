@@ -24,21 +24,6 @@ local function FindPlayers(Runner,Name)
 				matched = true;
 			end
 		end
-		
-		if not matched then
-			if string.lower(Name) == "me" then
-				matches[#matches+1] = Runner
-				matched = true;
-			elseif string.lower(Name) == "all" then
-				matches[#matches+1] = v
-				matched = true;
-			elseif string.lower(Name) == "others" then
-				if v.Name ~= Runner.Name then
-					matches[#matches+1] = v
-					matched = true;
-				end
-			end
-		end
 	end
 	return matches
 end
@@ -55,11 +40,8 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 	
 	if group.Chat or ignorechatperm then
 		if not ignorechatperm and commanddata[1].ChatDisabled then return env.Notify(player,{"bulb","This command is disabled for chat invokes."}) end
-		local fmsg = string.split(fullmsg," ");
-		table.remove(fmsg,1);
-		fullmsg = table.concat(fmsg," ");
 		
-		local args = string.split(fullmsg,env.Data.Settings.ChatCommands.Sep);
+		local args = fullmsg;
 		local command = commanddata[1];
 		if commanddata[1].SpecificPerm then
 			if not env.GetPlayerHasPermission(env,playerdata,commanddata[1].SpecificPerm) then env.Notify(player,{"no_permission","Specific permission for this command is missing: "..commanddata[1].SpecificPerm}); return false end;
@@ -98,14 +80,10 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 						fields[field.Internal] = 0;
 					end
 				elseif string.lower(field.Type) == "boolean" then
-					if string.lower(v) == "true" or string.lower(v) == "yes" or string.lower(v) == "1" then
-						fields[field.Internal] = true;
-					elseif string.lower(v) == "false" or string.lower(v) == "no" or string.lower(v) == "0" then
-						fields[field.Internal] = false;
-					end
+					fields[field.Internal] = v;
 				elseif string.lower(field.Type) == "color" then
-					if Color3.fromRGB(v) then
-						fields[field.Internal] = BrickColor.new(v).Color;
+					if typeof(v) == "BrickColor" then
+						fields[field.Internal] = v.Color;
 					else
 						fields[field.Internal] = BrickColor.Random().Color;
 					end
@@ -115,7 +93,7 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 					else
 						fields[field.Internal] = 0;
 					end
-				elseif string.lower(field.Type) == "player" then
+				elseif string.lower(field.Type) == "player" or string.lower(field.Type) == "players" then
 					local plr = FindPlayers(player,v);
 					if plr and plr[1] then
 						fields[field.Internal] = plr[1]
@@ -123,9 +101,7 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 						if field.Required then env.Notify(player,{"unsuccessful","No player has been found with a matching name."}) ;return false end
 						fields[field.Internal] = nil
 					end
-				elseif string.lower(field.Type) == "players" then
-					fields[field.Internal] = FindPlayers(player,v) or {};
-				elseif string.lower(field.Type) == "safeplayer" then
+				elseif string.lower(field.Type) == "safeplayer" or string.lower(field.Type) == "safeplayers" then
 					local plr = FindPlayers(player,v)[1] or nil;
 					if plr then
 						local othergroup = env.Ingame.Admins[plr.UserId].FlagGroup
@@ -138,20 +114,6 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 						end
 					else
 						if field.Required then env.Notify(player,{"unsuccessful","No player has been found matching the name."});return false; end
-						fields[field.Internal] = nil
-					end
-				elseif string.lower(field.Type) == "safeplayers" then
-					local plrs = FindPlayers(player,v) or nil;
-					if plrs[1] then
-						for num,plr in pairs(plrs) do
-							local othergroup = env.Ingame.Admins[plr.UserId]
-							if not (tonumber(othergroup.Immunity) < tonumber(group.Immunity)) then
-								table.remove(plrs,num)
-							end
-						end
-						fields[field.Internal] = plrs
-					else
-						if field.Required then env.Notify(player,{"unsuccessful","No player has been found matching the name."}); return false; end
 						fields[field.Internal] = nil
 					end
 				elseif string.lower(field.Type) == "metaplayer" then

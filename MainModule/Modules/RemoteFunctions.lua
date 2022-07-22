@@ -214,10 +214,26 @@ return function(api)
 		elseif key == "IsAuthed" then
 			return api.CloudAPI.CheckAuth(player);
 		elseif key == "SendCommand" then
+			--[[
 			local command = string.split(reason," ")[1]
 			if api.Data.Commands[command] then
 				-- UI, Player, Command, Args
 				local dat = api.UICommand(api,player,api.Data.Commands[command],reason,true);
+				if dat then
+					return dat;
+				elseif type(dat) == "nil" then
+					return;
+				else -- if there's a returning and it's NOT nil then there would be an issue:
+					return false;
+				end
+			else
+				return false;
+			end
+			]]
+			local command = reason[1];
+			if api.Data.Commands[command] then
+				-- UI, Player, Command, Args
+				local dat = api.UICommand(api,player,api.Data.Commands[command],reason[2],true);
 				if dat then
 					return dat;
 				elseif type(dat) == "nil" then

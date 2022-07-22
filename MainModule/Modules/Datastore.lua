@@ -107,7 +107,6 @@ function Module(name,env,...)
 					if info.message == "This token does not belong to this game." then
 						warn("oops? someone dropped a wrong key...")
 						env.Data.Gamelock = {true,"Sezei.me API | This game is locked due to the game owner not setting it up correctly."};
-						return;
 					elseif not info.message == "Success." then
 						warn("Even Easier Datastore | The token is not valid; Due to that, datastores will be used instead. Error info: "..info.message);
 						env.Data.Settings.CloudAPI.Token.UseToken = false;
@@ -473,7 +472,9 @@ task.spawn(function()
 									if not suc or not res or not res.success then
 										dat = Task.Category.Store:GetAsync(Task.Key)
 									else
-										dat = res.message
+										if res then
+											dat = res.message
+										end
 									end
 									if type(dat) == "string" and string.sub(dat,1,5) == "_tbl:" then
 										Task.Data = httpSvc:JSONDecode(string.sub(dat,6));

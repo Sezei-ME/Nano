@@ -767,14 +767,7 @@ local function buildButtons(cmds) -- Build the UI button.
 								readyfields[tonumber(v.Name)] = v.Value.Value;
 							end
 						end
-						local strin = k
-						for key,val in pairs(readyfields) do
-							if key == 1 then
-								strin ..= " "..val
-							else
-								strin ..= sep..tostring(val)
-							end
-						end
+						local strin = {k,readyfields};
 						command.CommandSent.Visible = true
 						local done = {false}
 						task.spawn(function()
