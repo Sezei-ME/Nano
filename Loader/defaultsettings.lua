@@ -58,7 +58,7 @@ local settings = {
 		};
 		
 		Groups =
-		{ ----	Do note that group ranks are specific rather than 'rank is higehr than'
+		{ ----	Do note that group ranks are **specific** rather than 'rank is higehr than'
 			Group = GroupIdHere;
 			Rank = {
 				[Rank1] = String/Table;
@@ -66,6 +66,24 @@ local settings = {
 				...
 			};
 		};
+		
+		Gamepasses =
+		{
+			Gamepass = GamepassIdHere;
+			FlagGroup = String/Table;
+		};
+		
+		VIP Server Owner =
+		{
+			VIPOwner = non-false value;
+			FlagGroup = String/Table;
+		};
+		
+		Default =
+		{
+			Default = non-false value;
+			FlagGroup = String/Table;
+		}
 		
 		Priorities;
 			The higher the node, the higher the priority is.

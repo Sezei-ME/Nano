@@ -110,7 +110,7 @@ return function(settings)
 	end
 	
 	for k,v in pairs(settings.Players) do
-		if not v.UserId and not v.Name and not v.Group and not v.Gamepass then
+		if not v.UserId and not v.Name and not v.Group and not v.Gamepass and not v.VIPOwner and not v.Default then
 			erroring = true;
 			table.insert(errors,"Player key \""..k.."\": Missing check type.");
 		end

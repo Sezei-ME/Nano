@@ -1393,9 +1393,26 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					end
 				elseif v["Name"] then
 					bubble = NanoWorks:CreateBubble(v.Name);
+				elseif v["Group"] then
+					-- That's a group thing :eyes:
+					local group = game:GetService("GroupService"):GetGroupInfoAsync(v.Group);
+					bubble = NanoWorks:CreateBubble("Group - "..group.Name);
+					bubble:AddAsset("message",{Text = "Group editing is not (yet) supported. Sorry for the inconvenience."});
+					continue
+				elseif v["Gamepass"] then
+					-- Gamepass thing :eyes:
+					bubble = NanoWorks:CreateBubble("Gamepass ("..v.Gamepass..")");
+					bubble:AddAsset("message",{Text = "Gamepass editing is not supported. Use a datastore editor instead or edit the settings module."});
+					continue
+				elseif v["VIPOwner"] then
+					bubble = NanoWorks:CreateBubble("VIP Server Owner");
+					bubble:AddAsset("message",{Text = "VIP editing is not supported. Use a datastore editor instead or edit the settings module."});
+					continue
+				elseif v["Default"] then
+					bubble = NanoWorks:CreateBubble("Non-Admin / Default");
 				else
 					continue -- SINCE WHEN DID THIS EXIST?!
-					-- Serious note: Skips Groups and Gamepasses.
+					-- Serious note: Skips anything that 
 				end
 				bubble.self.Name = k;
 				bubble.self.Parent = parent;
