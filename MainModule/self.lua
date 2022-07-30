@@ -49,7 +49,7 @@ end
 for _,v in pairs(script:GetChildren()) do
 	if v:IsA("ModuleScript") then
 		if betabuild then loads+=1 end
-		local success,mod = pcall(function()require(v)end)
+		local success,mod = pcall(function()return require(v)end)
 		if success then
 			if type(mod) == "table" and mod["_NanoWrapper"] then
 				env[v.Name] = mod._NanoWrapper(env);
