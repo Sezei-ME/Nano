@@ -6,15 +6,22 @@ return function(env,playerdata,permissionneeded)
 	local info = env.GetGroupInfo(env,playerdata);
 	local perms = string.split(info.Flags,";");
 	local permissionfolder = string.split(permissionneeded,".");
-
+	
+	env.Bind:Fire("PermissionChecked",playerdata.UserId,permissionneeded);
+	
 	if permissionneeded == "Chat" then
 		return info.Chat or false
 	elseif permissionneeded == "UI" then
 		return info.UI or false
 	end
-
-	env.Bind:Fire("PermissionChecked",playerdata.UserId,permissionneeded);
-
+	
+	-- Disallow GameSettings in VIP Servers.
+	if permissionneeded == "Nano.GameSettings" then
+		if (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
+			return false;
+		end
+	end	
+	
 	for _,v in pairs(perms) do
 		if v == "*" then -- Giving root admin is extremely dangerous; it ignores negatives.
 			return true;
