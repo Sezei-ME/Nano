@@ -38,22 +38,27 @@ end
 
 local function format(originscript,replacementdata)
 	local s:string = tostring(originscript);
-	
+
 	for old,new in pairs(replacementdata) do
 		s = s:gsub("<"..old..">",tostring(new));
 	end
-	
+
 	return s;
 end
 
 for _,v in pairs(script:GetChildren()) do
 	if v:IsA("ModuleScript") then
 		if betabuild then loads+=1 end
-		mod = require(v)
-		if type(mod) == "table" and mod["_NanoWrapper"] then
-			env[v.Name] = mod._NanoWrapper(env);
+		local success,mod = pcall(function() return require(v) end)
+		if success then
+			if type(mod) == "table" and mod["_NanoWrapper"] then
+				env[v.Name] = mod._NanoWrapper(env);
+			else
+				env[v.Name] = mod;
+			end
 		else
-			env[v.Name] = mod;
+			warn('Nano | Failed to compile module: '..v.Name..' with error "'..mod..'"');
+			table.insert(env.Logs.Errors,{os.time(),"Module Compilation Failed: "..v.Name..' with error "'..mod..'"'});
 		end
 	end
 end
@@ -80,7 +85,7 @@ function buildRankTable(p,info,...)
 			return
 		end
 	end
-	
+
 	env.warn(format("Invalid Data while building RankTable!\np var <p>\ninfo var <info>",{["p"] = p; ["info"] = info}))
 end
 
@@ -108,6 +113,7 @@ function toCommands(folder,stack)
 					local suc,res = pcall(function() mv.OnLoad(env) end);
 					if not suc then
 						env.warn(3, "An OnLoad function has failed; Source: ".. v.Parent.Name .. "." .. v.Name.." ; "..res);
+						table.insert(env.Logs.Errors,{os.time(),"An OnLoad function has failed; Source: ".. v.Parent.Name .. "." .. v.Name.." ; "..res});
 					end
 					mv.OnLoad = nil;
 				end
@@ -115,7 +121,8 @@ function toCommands(folder,stack)
 				env.Data.Commands[string.lower(mv.Name)] = {mv,stack}
 			end)
 			if not s then
-				env.warn(3, "A command has failed to get compiled; "..f)
+				env.warn(3, "A command was failed to compile; "..f)
+				table.insert(env.Logs.Errors,{os.time(),"A command was failed to compile "..f});
 			end
 		elseif v:IsA('Folder') then
 			toCommands(v,((stack~="" and stack.."." or "") .. v.Name))
@@ -223,10 +230,13 @@ function handleJoin(p)
 			end
 		end
 
-		-- Better Priority Thing (BETA_2B); Defined Users -> Groups -> Gamepasses 
+		-- Version BETA_PRE3#6 (58); Added VIP Owner and Default FlagGroups.
+		-- Normal -> Groups -> VIPOwner -> Gamepasses -> Default
 
 		local groups = {};
 		local gamepasses = {};
+		local vipowner = nil;
+		local default = nil;
 
 		if not env.Ingame.Admins[p.UserId] then
 			for key,v in pairs(env.Data.Settings.Players) do
@@ -249,6 +259,12 @@ function handleJoin(p)
 				end]]
 				elseif v["Group"] then
 					table.insert(groups,v);
+
+				elseif v["VIPOwner"] then
+					vipowner = v;
+
+				elseif v["Default"] then
+					default = v;
 				--[[
 				local rank = p:GetRankInGroup(tonumber(v["Group"]));
 				if not v["Rank"] then
@@ -267,14 +283,16 @@ function handleJoin(p)
 			end;
 		end
 
-		-- If not admin; Check groups.
+		-- Check groups.
 		if not env.Ingame.Admins[p.UserId] then
 			for key,v in pairs(groups) do
 				local rank = p:GetRankInGroup(tonumber(v["Group"]));
 				if not v["Rank"] then
 					env.warn(2,"Malformed Settings: 'Group' flags require a rank table.")
+					table.insert(env.Logs.Errors,{os.time(),"Malformed Settings: 'Group' flags require a rank table."});
 				elseif type(v["Rank"]) ~= "table" then
 					env.warn(2,"Nano | Malformed Settings: 'Rank' flag must be a table type.")
+					table.insert(env.Logs.Errors,{os.time(),"Malformed Settings: 'Rank' flag must be a table type."});
 				else
 					if v["Rank"] then
 						for rnk,vv in pairs(v["Rank"]) do
@@ -295,7 +313,14 @@ function handleJoin(p)
 			end
 		end
 
-		-- If STILL not admin; Check gamepasses.
+		-- VIP Ownership.
+		if game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0 then -- Check VIP Server status
+			if p.UserId == game.PrivateServerOwnerId and not env.Ingame.Admins[p.UserId] then
+				env.Ingame.Admins[p.UserId] = vipowner;
+			end
+		end
+
+		-- Check gamepasses.
 		if not env.Ingame.Admins[p.UserId] then
 			for key,v in pairs(gamepasses) do
 				if game:GetService("MarketplaceService"):UserOwnsGamePassAsync(p.UserId,v["Gamepass"]) then
@@ -303,6 +328,11 @@ function handleJoin(p)
 					break;
 				end
 			end
+		end
+
+		-- There might be a default key?
+		if default and not env.Ingame.Admins[p.UserId] then
+			env.Ingame.Admins[p.UserId] = default;
 		end
 
 		-- Give up and give the Non-Admin key.
@@ -326,7 +356,11 @@ function handleJoin(p)
 					if not s then
 						env.Notify(p,{"bug","An error has occured with the command: "..f})
 					end
+				else
+					table.insert(env.Logs.Chat,1,{os.time(),p.UserId,msg});
 				end
+			else
+				table.insert(env.Logs.Chat,1,{os.time(),p.UserId,msg});
 			end
 		end
 
@@ -349,17 +383,25 @@ function handleJoin(p)
 			end
 		end
 	end)
-	
+
+	-- An error has occured.
 	if not success then
 		warn("Failed to handle player "..p.Name.." with error \""..err.."\"; Retrying in 2 seconds");
+		table.insert(env.Logs.Errors,{os.time(),"Failed to handle player "..p.Name});
 		task.wait(2);
 		return handleJoin(p);
 	end
-	
+
+	-- No error has occured but they still have no admin role..?!?
+	if not env.Ingame.Admins[p.UserId] then
+		warn("Failed to handle player "..p.Name.." without an error (User has no admin role); Retrying in 2 seconds");
+		table.insert(env.Logs.Errors,{os.time(),"Failed to handle player "..p.Name});
+		task.wait(2);
+		return handleJoin(p);
+	end
+
 	return true;
 end
-
-local commandenv = {}; -- TODO : Make a 'secure' env variable so external modules won't be able to interfere with the real environment (preferably before Beta 3)
 
 task.spawn(function()
 	while task.wait() do
@@ -379,14 +421,15 @@ if firstCall then
 	return function(loader:Script)
 		loader.Parent = game:GetService("ServerScriptService")
 		env.Loader = loader
-		
-		
+
+
 		if loader:FindFirstChild('Settings') then
 			loads+=1
 			local sets = require(loader:FindFirstChild('Settings'))
 			env.Data.Settings = sets;
 		else
 			env.warn(1,"The settings module is missing.");
+			table.insert(env.Logs.Errors,{os.time(),"The settings module is missing."});
 			return
 		end
 
@@ -422,7 +465,7 @@ if firstCall then
 		if loader:FindFirstChild("Functions") then
 			for _,v in pairs(loader:FindFirstChild("Functions"):GetChildren()) do
 				if v:IsA("ModuleScript") then
-					pcall(function()
+					local s,f = pcall(function()
 						loads+=1
 						local r = require(v) -- returned data
 						if r["_nano"] then
@@ -434,7 +477,7 @@ if firstCall then
 								end
 							end
 							if r["_nano"]["load"] then
-								local f = r["_nano"].load(env)
+								local f = r["_nano"].load(env);
 								if r["_nano"]["loadcomplete"] then
 									r["_nano"].loadcomplete(f);
 								end
@@ -443,6 +486,11 @@ if firstCall then
 							env[v.Name] = r
 						end
 					end)
+
+					if not s then
+						warn('Nano | Failed to compile module: '..f);
+						table.insert(env.Logs.Errors,{os.time(),"Module compilation failed: "..f});
+					end
 				end
 			end
 		end
@@ -451,6 +499,7 @@ if firstCall then
 		local s = toCommands(loader:FindFirstChild("Commands"));
 		if not s then
 			env.warn("No commands were loaded. Attempting to fetch basic commands.")
+			table.insert(env.Logs.Errors,{os.time(),"No commands were loaded."});
 			env.Data.Commands = env.BaseCommands;
 		end
 
@@ -465,20 +514,20 @@ if firstCall then
 		game:GetService("Players").PlayerRemoving:Connect(function(p)
 			env.Ingame.Admins[p.UserId] = nil;
 		end)
-		if betabuild then print("Nano Nightly | Loaded successfully in "..math.round(math.abs(loadtime-os.clock())*1000).."ms "..(game:GetService("RunService"):IsStudio() and "(In Studio)" or "(In Live-Server)") .. " with "..loads.." loads of modules.") end;
+		if betabuild then print("Nano Nightly | Loaded successfully in "..math.round(math.abs(loadtime-os.clock())*1000).."ms "..(game:GetService("RunService"):IsStudio() and "(In Studio)" or "(In a Live Server)") .. " with "..loads.." loads of modules.") end;
 		env.Bind:Fire("NanoLoaded");
 		loaded = true;
 	end
 else
 	env.Bind:Fire("LoadAttempt"); -- they tried :shrug:
 	return -- Return nothing, but don't init the admin again either.
-		function(loader:Script?|ModuleScript?)
+		function(loader:Script|ModuleScript)
 			if typeof(loader) == "Instance" then
-				print("Nano | Attempt to load Nano after it loaded caught. Source: "..loader.Name);
-			end
+			print("Nano | Attempt to load Nano after it loaded caught. Source: "..loader.Name);
+		end
 		end
 
-		-- If you want to return the environment, or literally anything else, you will need to fork the module; I do not allow this with a "vanilla"
-		-- module, since it could result in bad actors getting into the environment without your knowledge.
-		-- Do so at your own risk only; and remember; forking the main module rather than using functions will void any attempt to support you.
+	-- If you want to return the environment, or literally anything else, you will need to fork the module; I do not allow this with a "vanilla"
+	-- module, since it could result in bad actors getting into the environment without your knowledge.
+	-- Do so at your own risk only; and remember; forking the main module rather than using functions will void any attempt to support you.
 end

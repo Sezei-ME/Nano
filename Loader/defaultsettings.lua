@@ -12,10 +12,21 @@ local settings = {
 	CloudAPI = {
 		UseBanlist = true; -- Banlist provided from the Sezei.ME API. It includes bans from all services by the Sezei.ME team.
 		Token = { -- If you have a Sezei.ME API token, you can place it here in order to use it.
-			-- As of now, this service is not yet active. However, it's better to get ready for it soon.
-			UseToken = false; -- Use the token; true = yes, false = no; If it's false, it uses datastore instead.
+			
+			-- When you use the token, the following info is stored;
+			-- Your settings, GameId, and all games that attempt to use your token.
+			
+			-- Do NOT use the same token for multiple games! They are binded to the GameId you created the token with!
+			-- If you use a bad (someone else's, more specifically) token, the game will be API-banned!
+			
+			-- For more info about stuff that might get stored, read here;
+			-- https://web.sezei.me/sezei-me-api/info-regarding-collected-data
+			
+			-- If you have the token disabled, it will use the Datastores instead of S.ME's storage.
+			
+			UseToken = false; -- Use the token; true = yes, false = no;
 			Key = ""; -- Place the token key here.
-			-- 	  "SZXXXXXXXXXXXXXXXXXXXXXXXXX"; -- Keys look like this. (unless made pre-API overhaul)
+			-- 	  "SZXXXXXXXXXXXXXXXXXXXXXXXXX"; -- Keys look like this. (unless made pre-API overhaul, in which case it might look differently!)
 		};
 	};
 	
@@ -58,7 +69,7 @@ local settings = {
 		};
 		
 		Groups =
-		{ ----	Do note that group ranks are specific rather than 'rank is higehr than'
+		{ ----	Do note that group ranks are **specific** rather than 'rank is higehr than'
 			Group = GroupIdHere;
 			Rank = {
 				[Rank1] = String/Table;
@@ -66,6 +77,24 @@ local settings = {
 				...
 			};
 		};
+		
+		Gamepasses =
+		{
+			Gamepass = GamepassIdHere;
+			FlagGroup = String/Table;
+		};
+		
+		VIP Server Owner =
+		{
+			VIPOwner = non-false value;
+			FlagGroup = String/Table;
+		};
+		
+		Default =
+		{
+			Default = non-false value;
+			FlagGroup = String/Table;
+		}
 		
 		Priorities;
 			The higher the node, the higher the priority is.

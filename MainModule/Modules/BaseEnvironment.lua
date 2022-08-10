@@ -2,12 +2,12 @@ local ds = nil;
 
 local TextService = game:GetService("TextService")
 local env = {
-	InternalBuild = "BETA_PRE3#5";
-	TrueBuild = 57; -- QA_BUILD[n]
+	InternalBuild = "BETA_PRE3#8";
+	TrueBuild = 62; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
 	Ingame = {Admins = {}; Bans = {}; };
-	Client = {Modules = {}}; -- Modules are being sent to all clients in order to create custom functions.
+	Client = {Modules = {}; Assets = {}}; -- Modules are being sent to all clients in order to create custom functions.
 	Strings = {
 		Ban_Server_Permanent = "You are server-banned for \"<banreason>\". This ban is active until the server will shutdown.";
 		Ban_Server_Temporary = "You are server-banned for \"<banreason>\". Estimated time left: <timeleft> minutes.";
@@ -18,8 +18,12 @@ local env = {
 	};
 	MainModule = script.Parent;
 	Bind = script.Parent._Event;
-	Errors = {}; -- Collect the errors that occured. Available since QA_BUILD21
-	-- not really used so might be removed later.
+	-- Replaced the Errors = {} with this;
+	Logs = {
+		Errors = {}; 	-- Template: {time, error}
+		Chat = {};		-- Template: {time, playerid, message}
+		Commands = {};	-- Template: {time, playerid, source, command}
+	}
 }
 
 -- Legacy functions: Use env.MetaPlayer(env, plr)
@@ -62,8 +66,14 @@ function env.BuildBanReason(player,bantype,banreason,timeleft)
 	end
 end
 
-function env.Client.AddToClients(module:ModuleScript?)
-	return table.insert(env.Client.Modules,module);
+function env.Client:AddAsset(asset)
+	local success, folder = pcall(function()
+		return env.MainModule:FindFirstChild("NanoUI"):FindFirstChild("MainHandler"):FindFirstChild("Assets")
+	end);
+	
+	if success then
+		asset:Clone().Parent = folder;
+	end
 end
 
 return env

@@ -53,6 +53,14 @@ function module:ClearFrame(frame:Instance)
 end
 
 function module:NewAsset(typ,options)
+	local customassets = {}
+	-- Gather custom assets; Must have a 'run.nw' module inside it to be readable by the script and convert them into a framework asset.
+	for _,v in pairs(assets:GetChildren()) do
+		if v:FindFirstChild("run.nw") and v:FindFirstChild("run.nw"):IsA("ModuleScript") then
+			customassets[string.lower(v.Name)] = v;
+		end
+	end
+	
 	if not options then options = {} end
 	if string.lower(typ) == "button" then
 		local asset = assets.Button:Clone()
@@ -215,6 +223,43 @@ function module:NewAsset(typ,options)
 		end
 		asset.Visible = true;
 		return {self = asset; event = asset.Value.Changed}
+	elseif customassets[string.lower(typ)] then
+		local asset = customassets[string.lower(typ)]:Clone();
+		asset.Name = options.Key or options.Name or typ;
+		
+		local success,mod = pcall(function() return require(asset:FindFirstChild("run.nw")) end)
+		if not success then
+			return {self = asset}
+		else
+			if type(mod.options) == "table" then
+				local opts = {};
+				for _,v in pairs(mod.options) do
+					local str = string:split(v,":");
+					if str[2] == "table" then
+						opts[str[1]] = options[str[1]] or {};
+					elseif str[2] == "string" then
+						opts[str[1]] = options[str[1]] or "";
+					elseif str[2] == "number" then
+						opts[str[1]] = options[str[1]] or 0;
+					elseif str[2] == "boolean" or str[2] == "bool" then
+						opts[str[1]] = options[str[1]] or false;
+					else
+						warn("Unhandled option ["..str[1].."]: Unexpected option type.");
+					end
+				end
+				
+				local ret = mod.Build(opts);
+				if type(ret) == "table" then
+					ret['self'] = asset;
+					ret['run'] = mod.Run
+					return ret;
+				else
+					return {self = asset; run = mod.Run; returned = ret};
+				end
+			else
+				mod.Build(options);
+			end
+		end
 	else
 		local s, rtrn = pcall(function()
 			local asset = Instance.new(typ);

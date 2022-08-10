@@ -34,6 +34,10 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then -- Chat has been used while it's disabled;
 		return;
 	end
+	
+	local concat = table.concat(fullmsg,"/")
+	table.insert(env.Logs.Commands,1,{os.time(),player.UserId,"Panel",concat});
+	
 	local hasPerm = false
 	local group = env.GetGroupInfo(env,playerdata)
 	if not group then env.Notify(player,{"script_error","A group was not found for "..player.Name}) end;

@@ -19,14 +19,14 @@ Info for developers can be found in the Developer Info localscript in the loader
 
 Lead Contributors;
 @Cytrexon - Frontend Development (Commands, UI design)
-@0bBinary - Backend Development (Engine, UI framework)
+@0bBinary - Backend Development (Client & Server engines)
 
 For the contributors list, you can open the Credits frame and check it out freely.
 
 ---------------------------------------------------------
-MAKE SURE THE LOADER YOU GOT CAME FROM THE AXELIUS GROUP, @0bBinary (for the Nightly module), OR DIRECTLY FROM THE SME GITHUB!
+MAKE SURE THE LOADER YOU GOT CAME FROM THE AXELIUS GROUP (or @0bBinary for the Nightly module), OR DIRECTLY FROM THE SME GITHUB!
 If you didn't, you likely have gotten a malicious clone of
-Nano, which might add backdoored code alongside no auto-updates.
+Nano, which might add backdoored code alongside no auto-updates (which is bad).
 
 Neither Axelius, SME, nor any of the contributors are responsible for damage that
 might happen when using these malicious modules.

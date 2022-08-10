@@ -35,7 +35,7 @@ local function warn(code, ...)
 	if tonumber(code) then
 		Roblox.warn("Nano Client | Error "..code.." - "..require(script.Parent.ErrorCodes):ResolveCode(code).." | ",...)
 	else
-		Roblox.warn("Nano Client | ",...)
+		Roblox.warn("Nano Client | ", code, ...)
 	end
 end
 
@@ -874,6 +874,7 @@ main.Frame.Refresh.MouseButton1Click:Connect(function()
 	task.wait(2.5);
 	interactDebounce = false
 end)
+main.Frame.Refresh.ImageColor3 = Color3.new(1,1,1)
 
 local function NewHighlight(character:Instance)
 	
@@ -930,6 +931,11 @@ event.OnClientEvent:Connect(function(reason,detail)
 		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat,false);
 	elseif reason == "Unmute" then
 		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat,true);
+	else
+		local newasset = NanoWorks:NewAsset(reason,detail);
+		if newasset.run then
+			newasset.run(script.Parent);
+		end
 	end
 end)
 
@@ -1149,6 +1155,7 @@ main.Frame.Credits.MouseButton1Click:Connect(function()
 		main.TopUI.Title.Text = "Credits";
 	end
 end)
+main.Frame.Credits.ImageColor3 = Color3.new(1,1,1)
 
 main.Frame.Settings.MouseButton1Click:Connect(function()
 	if main.TopUI.Visible == true and main.TopUI.Settings.Visible == true then
@@ -1164,8 +1171,10 @@ main.Frame.Settings.MouseButton1Click:Connect(function()
 		main.TopUI.Title.Text = "Settings";
 	end
 end)
+main.Frame.Settings.ImageColor3 = Color3.new(1,1,1)
 
-main.Frame.Connection.MouseButton1Click:Connect(function()
+--[[
+main.Frame.Chatlogs.MouseButton1Click:Connect(function()
 	if main.TopUI.Visible == true and main.TopUI.Connection.Visible == true then
 		main.TopUI.Visible = false;
 	else
@@ -1175,10 +1184,11 @@ main.Frame.Connection.MouseButton1Click:Connect(function()
 				v.Visible = false;
 			end
 		end
-		main.TopUI.Connection.Visible = true;
-		main.TopUI.Title.Text = "Connection Info";
+		main.TopUI.Chatlogs.Visible = true;
+		main.TopUI.Title.Text = "Chatlogs";
 	end
 end)
+--]]
 
 local lookingAtStarred = false
 main.Frame.Starred.MouseButton1Click:Connect(function()
@@ -1197,6 +1207,7 @@ main.Frame.Starred.MouseButton1Click:Connect(function()
 		end
 	end
 end)
+main.Frame.Starred.ImageColor3 = Color3.new(1,1,1)
 
 local s = main.TopUI.Settings
 local trueI = "http://www.roblox.com/asset/?id=6031068421";
@@ -1393,9 +1404,29 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					end
 				elseif v["Name"] then
 					bubble = NanoWorks:CreateBubble(v.Name);
+				elseif v["Group"] then
+					-- That's a group thing :eyes:
+					local group = game:GetService("GroupService"):GetGroupInfoAsync(v.Group);
+					bubble = NanoWorks:CreateBubble("Group - "..group.Name);
+					bubble:AddAsset("message",{Text = "Group editing is not (yet) supported. Sorry for the inconvenience."});
+					bubble.self.Parent = parent
+					continue
+				elseif v["Gamepass"] then
+					-- Gamepass thing :eyes:
+					bubble = NanoWorks:CreateBubble("Gamepass ("..v.Gamepass..")");
+					bubble:AddAsset("message",{Text = "Gamepass editing is not supported. Use a datastore editor instead."});
+					bubble.self.Parent = parent
+					continue
+				elseif v["VIPOwner"] then
+					bubble = NanoWorks:CreateBubble("VIP Server Owner");
+					bubble:AddAsset("message",{Text = "VIP editing is not supported. Use a datastore editor instead."});
+					bubble.self.Parent = parent
+					continue
+				elseif v["Default"] then
+					bubble = NanoWorks:CreateBubble("Non-Admin / Default");
 				else
 					continue -- SINCE WHEN DID THIS EXIST?!
-					-- Serious note: Skips Groups and Gamepasses.
+					-- Serious note: Skips anything that 
 				end
 				bubble.self.Name = k;
 				bubble.self.Parent = parent;
@@ -1617,11 +1648,79 @@ else
 	script.Parent.Settings:Destroy();
 end
 
-local c = main.TopUI.Connection
-local rawcon = NanoWorks:NewAsset("message",{Name = "rawcon"; Text = "Raw Ping:\n---"; Color = Color3.new(1,1,1)});
-local srvtck = NanoWorks:NewAsset("message",{Name = "srvtck"; Text = "Server TPS:\n---"; Color3.new(1,1,1)})
-rawcon.self.Parent = c;
-srvtck.self.Parent = c;
+main.Frame.Chatlogs.MouseButton1Click:Connect(function()
+	local response = remote:InvokeServer("GetChatlogs");
+	NanoWorks:ClearFrame(main.TopUI.Chatlogs);
+	if type(response) == "boolean" then
+		if response == false then
+			NanoWorks:NewAsset("message",{Text = "You don't have permission to see chatlogs!",Color = Color3.new(1, 1, 1)}).self.Parent = main.TopUI.Chatlogs
+		end
+	elseif type(response) == "table" then
+		for k,v in ipairs(response) do
+			if k > 100 then
+				break;
+			end
+			
+			NanoWorks:NewAsset("message",{Text = os.date("%X",v[1]).. " | "..game:GetService("Players"):GetNameFromUserIdAsync(v[2]).." | "..v[3]}).self.Parent = main.TopUI.Chatlogs;
+		end
+	end
+	
+	if main.TopUI.Visible == true and main.TopUI.Chatlogs.Visible == true then
+		main.TopUI.Visible = false;
+	else
+		main.TopUI.Visible = true;
+		for _,v in pairs(main.TopUI:GetChildren()) do
+			if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+				v.Visible = false;
+			end
+		end
+		main.TopUI.Chatlogs.Visible = true;
+		main.TopUI.Title.Text = "Chatlogs";
+	end
+end)
+main.Frame.Chatlogs.ImageColor3 = Color3.new(1,1,1);
+
+main.Frame.Errorlogs.MouseButton1Click:Connect(function()
+	local response = remote:InvokeServer("GetErrorlogs");
+	NanoWorks:ClearFrame(main.TopUI.Chatlogs);
+	if type(response) == "boolean" then
+		if response == false then
+			NanoWorks:NewAsset("message",{Text = "You don't have permission to see errorlogs!",Color = Color3.new(1, 1, 1)}).self.Parent = main.TopUI.Errorlogs;
+		end
+	elseif type(response) == "table" then
+		for k,v in ipairs(response) do
+			if k > 100 then
+				break;
+			end
+
+			NanoWorks:NewAsset("message",{Text = os.date("%X",v[1]).. " | "..v[2]}).self.Parent = main.TopUI.Errorlogs;
+		end
+	end
+
+	if main.TopUI.Visible == true and main.TopUI.Errorlogs.Visible == true then
+		main.TopUI.Visible = false;
+	else
+		main.TopUI.Visible = true;
+		for _,v in pairs(main.TopUI:GetChildren()) do
+			if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+				v.Visible = false;
+			end
+		end
+		main.TopUI.Errorlogs.Visible = true;
+		main.TopUI.Title.Text = "Errorlogs";
+	end
+end)
+main.Frame.Errorlogs.ImageColor3 = Color3.new(1,1,1);
+
+--Check if any button is loaded improperly and mark them as red; Likely because they weren't scripted.
+for _,v in pairs(main.Frame:GetChildren()) do
+	if v:IsA("ImageButton") then
+		if v.ImageColor3 ~= Color3.new(1,1,1) then
+			v.ImageColor3 = Color3.new(1, 0.266667, 0.266667);
+			warn("Improper scripting for the "..v.Name.." button! Button set as inactive.");
+		end
+	end
+end
 
 --Initial ping update
 local starttick = tick();
@@ -1635,7 +1734,7 @@ task.spawn(function()
 		local reply = remote:InvokeServer("PingTest");
 		local rawres = math.abs(os.clock() - starttick) * 1000;
 		local res = math.floor(rawres)
-		local srvtick = remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
+		remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
 		main.Ping.ms.Text = tostring(res).."ms"
 		-- Get image by category; Low, Med, High or V.High
 		if res >= 1000 then
@@ -1660,7 +1759,8 @@ task.spawn(function()
 			main.Ping.Image = "rbxassetid://9189319213"
 			main.Ping.ImageColor3 = Color3.new(1,1,1)
 		end
-		rawcon.edit({Text = "Raw Ping:\n"..rawres,Color = main.Ping.ImageColor3});
-		srvtck.edit({Text = "Server TPS:\n"..  srvtick });
+		
+		-- Get errors and chatlogs from the server.
+		
 	end
 end)

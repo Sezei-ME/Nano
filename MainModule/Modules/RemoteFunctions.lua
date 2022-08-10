@@ -93,7 +93,7 @@ return function(api)
 			if reason == "CloudAPI" then return {UseBanlist = api.Data.BaseSettings.CloudAPI.UseBanlist; Token = {UseToken = api.Data.BaseSettings.CloudAPI.UseToken; Key = "REDACTED"}} end; -- Don't send REAL cloudAPI data for security reasons.
 			return api.Data.Settings[reason];
 		elseif key == "GetGameSettings" then
-			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") and not (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
 				local send = {}
 				for k,v in pairs(api.Data.Settings) do
 					if api.Data.BaseSettings[k] then
@@ -111,7 +111,7 @@ return function(api)
 				return send;
 			end
 		elseif key == "GetModSettings" then
-			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") and not (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
 				local sending = {}
 				local amnt = 0;
 				for k,v in pairs(api.Data.Settings) do
@@ -124,8 +124,26 @@ return function(api)
 			else
 				return {};
 			end
+		elseif key == "GetChatlogs" then
+			if api.GetPlayerHasPermission(api,player,"Nano.Logs.Chat") then
+				return api.Logs.Chat
+			else
+				return false;
+			end
+		elseif key == "GetErrorlogs" then
+			if api.GetPlayerHasPermission(api,player,"Nano.Logs.Errors") then
+				return api.Logs.Errors
+			else
+				return false;
+			end
+		elseif key == "GetCmdlogs" then
+			if api.GetPlayerHasPermission(api,player,"Nano.Logs.Commands") then
+				return api.Logs.Commands
+			else
+				return false;
+			end
 		elseif key == "SetGameSetting" then
-			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") and not (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
 				local set = string.split(reason[1],".");
 				api.Data.Settings[set[1]][set[2]] = reason[2];
 				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
@@ -135,40 +153,65 @@ return function(api)
 		elseif key == "GetAPIStatus" then
 			return api.BetterBasics.bool.tobool(api.CloudAPI.Get('/redefinea'));
 		elseif key == "SetPlayerData" then
-			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
-				local plruserid = (api.Data.Settings.Players[reason[1]] and (api.Data.Settings.Players[reason[1]].UserId or api.Data.Settings.Players[reason[1]].Name and game:GetService("Players"):GetUserIdFromNameAsync(api.Data.Settings.Players[reason[1]].Name)))
-				if not plruserid then plruserid = 0 end;
-				
-				if plruserid == player.UserId then
-					api.MetaPlayer(api,player):Notify({"bulboff","You can't edit your own administration flags!"});
-					return
-				end
-				
-				if type(api.Data.Settings.Players[reason[1]].FlagGroup) == "table" then
-					api.Data.Settings.Players[reason[1]].FlagGroup[reason[2]] = reason[3];
-					if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
-						env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.Players[reason[1]].FlagGroup
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") and not (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
+				if api.Data.Settings.Players[reason[1]].UserId or api.Data.Settings.Players[reason[1]].Name then
+					local plruserid = (api.Data.Settings.Players[reason[1]] and (api.Data.Settings.Players[reason[1]].UserId or api.Data.Settings.Players[reason[1]].Name and game:GetService("Players"):GetUserIdFromNameAsync(api.Data.Settings.Players[reason[1]].Name)))
+					if not plruserid then plruserid = 0 end;
+					
+					if plruserid == player.UserId then
+						api.MetaPlayer(api,player):Notify({"bulboff","You can't edit your own administration flags!"});
+						return
 					end
-					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
-					api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s \""..reason[2].."\" variable to "..tostring(reason[3])});
-					return -- return after the save for quicker thing
-				elseif type(api.Data.Settings.Players[reason[1]].FlagGroup) == "string" then
-					api.Data.Settings.Players[reason[1]].FlagGroup = reason[2];
-					if not api.Data.Settings.FlagGroups[reason[2]] then
-						api.MetaPlayer(api,player):Notify({"bulboff","Something went wrong attempting to set key "..reason[1].." FlagGroup."});
+					
+					if type(api.Data.Settings.Players[reason[1]].FlagGroup) == "table" then
+						api.Data.Settings.Players[reason[1]].FlagGroup[reason[2]] = reason[3];
+						if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
+							env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.Players[reason[1]].FlagGroup
+						end
+						api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+						api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s \""..reason[2].."\" variable to "..tostring(reason[3])});
+						return
+					elseif type(api.Data.Settings.Players[reason[1]].FlagGroup) == "string" then
+						api.Data.Settings.Players[reason[1]].FlagGroup = reason[2];
+						if not api.Data.Settings.FlagGroups[reason[2]] then
+							api.MetaPlayer(api,player):Notify({"bulboff","Something went wrong attempting to set key "..reason[1].." FlagGroup."});
+						end
+						if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
+							env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.FlagGroups[reason[2]];
+						end
+						api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+						api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s group to "..reason[2]});
+						return
+					else
+						api.MetaPlayer(api,player):Notify({"failed","An error has occured while attempting to set key "..reason[1]});
 					end
-					if plruserid ~= 0 and env.Ingame.Admins[plruserid] then
-						env.Ingame.Admins[plruserid].FlagGroup = api.Data.Settings.FlagGroups[reason[2]];
+				elseif api.Data.Settings.Players[reason[1]].Group then
+					local groupdata = game:GetService("GroupService"):GetGroupInfoAsync(api.Data.Settings.Players[reason[1]].Group)
+					
+					--TODO--
+				elseif api.Data.Settings.Players[reason[1]].Default then
+					if type(api.Data.Settings.Players[reason[1]].FlagGroup) == "table" then
+						api.Data.Settings.Players[reason[1]].FlagGroup[reason[2]] = reason[3];
+						api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+						api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." (Default Key) \""..reason[2].."\" variable to "..tostring(reason[3])});
+						return
+					elseif type(api.Data.Settings.Players[reason[1]].FlagGroup) == "string" then
+						api.Data.Settings.Players[reason[1]].FlagGroup = reason[2];
+						if not api.Data.Settings.FlagGroups[reason[2]] then
+							api.MetaPlayer(api,player):Notify({"bulboff","Something went wrong attempting to set key "..reason[1].." FlagGroup."});
+						end
+						api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+						api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." (Default Key) group to "..reason[2]});
+						return
+					else
+						api.MetaPlayer(api,player):Notify({"failed","An error has occured while attempting to set key "..reason[1]});
 					end
-					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
-					api.MetaPlayer(api,player):Notify({"bulb","You set key "..reason[1].." ("..plruserid..")'s group to "..reason[2]});
-					return -- return after the save for quicker thing
 				else
-					api.MetaPlayer(api,player):Notify({"failed","An error has occured while attempting to set key "..reason[1]});
+					api.MetaPlayer(api,player):Notify({"failed","An error has occurred attempting to get key "..reason[1].." flag type"});
 				end
 			end
 		elseif key == "NewPlayerData" then
-			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") and not (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
 				for akey, ranked in pairs(api.Data.Settings.Players) do
 					-- actual fix (it was literally just missing the parentheses)
 					if (ranked and (ranked.UserId or ranked.Name and game:GetService("Players"):GetUserIdFromNameAsync(ranked.Name))) == (tonumber(reason) or game:GetService("Players"):GetUserIdFromNameAsync(reason)) then
@@ -205,7 +248,7 @@ return function(api)
 				end
 			end
 		elseif key == "DeletePlayerData" then
-			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") then
+			if api.GetPlayerHasPermission(api,player,"Nano.GameSettings") and not (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
 				table.remove(api.Data.Settings.Players,reason);
 				api.Store():Save("Nano_Settings",api.Data.Settings):wait();
 				api.MetaPlayer(api,player):Notify({"bulb","Key "..reason.." has been removed from the system's storage. Refresh the settings to see the change."});

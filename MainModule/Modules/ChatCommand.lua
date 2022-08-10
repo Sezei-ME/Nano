@@ -26,7 +26,7 @@ local function FindPlayers(Runner,Name)
 		end
 		
 		if not matched then
-			if string.lower(Name) == "me" then
+			if string.lower(Name) == "me"  then
 				matches[#matches+1] = Runner
 				matched = true;
 			elseif string.lower(Name) == "all" then
@@ -47,6 +47,7 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then -- Chat has been used while it's disabled;
 		return;
 	end
+	table.insert(env.Logs.Commands,1,{os.time(),player.UserId,"Chat",fullmsg});
 	local hasPerm = false
 	local group = env.GetGroupInfo(env,playerdata)
 	if not group then env.Notify(player,{"script_error","A group was not found for "..player.Name}) end;
