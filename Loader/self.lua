@@ -35,7 +35,14 @@ might happen when using these malicious modules.
 ]]
 
 local debug = false; -- Enable debugging; This will disable auto-updates! Try to use the functions folder instead! (Recommended to be FALSE)
-local nightly = false; -- Enable nightly builds; Enables unstable, but early Nano builds to be sent to your game. (Recommended to be FALSE unless you want to report bugs)
+local nightly = false; -- Enable nightly builds; If you feel like trying out new versions before everyone ele, you can enable this; However, they are not guaranteed to be stable, and may corrupt the stored data.
+
+
+-- Feel free to add your own branches, but make sure you know what you're doing!
+
+-- Default branch IDs;
+-- Stable / Main - 9215279390;
+-- Unstable / Nightly - 10057728709;
 
 local REQ = { -- Bypass the require ban that Roblox started imposing on smaller creators; if they play dirty, so will we - More info and reasoning: https://devforum.roblox.com/t/creator-marketplace-improving-model-safety/1795854
 	UIRE = require;

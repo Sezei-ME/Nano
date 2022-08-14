@@ -48,6 +48,13 @@ local settings = {
 		["Minimod"] = {Immunity = 10; Flags = "Moderation.Respawn"; UI = true; Chat = false};
 	};
 	
+	UI = {
+		Size = {
+			Width = 258;
+			Height = 245;
+		};
+	};
+	
 	ChatCommands = {
 		Active = true;
 		Prefix = ":";
@@ -69,7 +76,7 @@ local settings = {
 		};
 		
 		Groups =
-		{ ----	Do note that group ranks are **specific** rather than 'rank is higehr than'
+		{ ----	Do note that group ranks are **specific** rather than 'rank is higher than'
 			Group = GroupIdHere;
 			Rank = {
 				[Rank1] = String/Table;

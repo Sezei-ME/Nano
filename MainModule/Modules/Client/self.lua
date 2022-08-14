@@ -1,3 +1,4 @@
+local startTime = os.clock();
 local focused = true;
 local uiInUse = false;
 local script = script;
@@ -21,11 +22,20 @@ local commandContributions = {};
 local UIS = game:GetService("UserInputService");
 local sendEvents = true;
 local inTargetMode = false; -- For player-targeting mode when clicking on the cursor
+local mouseinUI = false;
 -- Get Remote
 local remote:RemoteFunction = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Remote");
 local event:RemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("AdminGUI_Event");
 
 script.Parent:WaitForChild("ErrorCodes") -- Await server detection of the client
+
+-- Check to see if the current build is a nightly one.
+if script.Parent:FindFirstChild("NightlyBuild") then
+	if script.Parent.NightlyBuild.Value == true then
+		nightly = true;
+		print("Nano Nightly (Client) | Started load; Only today's experiments will be printed out.");
+	end
+end
 
 local Roblox = {
 	warn = warn;
@@ -176,35 +186,35 @@ task.spawn(function()
 	if main.Visible then
 		local function missing()
 			local s = "";
-			
+
 			if not canUse or not Build then
 				s ..= "\nCanUseUI";
 				canUse = main.Visible;
 				Build = "BETA"
 			end
-			
+
 			if not introstr then
 				s ..= "\nGetStrings";
 				-- Already handled.
 			end
-			
+
 			if not favs then
 				s ..= "\ngetFavs";
 				favs = {};
 			end
-			
+
 			if not auth then
 				s ..= "\nIsAuthed";
 				auth = true;
 			end
-			
+
 			if not serverAccentColor then
 				s ..= "\nGetSetting"
 			end
-			
+
 			return s;
 		end
-		
+
 		if game:GetService("RunService"):IsStudio() then
 			task.wait(12.5);
 		else
@@ -215,10 +225,10 @@ task.spawn(function()
 			warn(-1,"Nano will stay dormant until the server successfully wakes. It might take a while.")
 			queueNotification("http://www.roblox.com/asset/?id=6031071057","Looks like the server is taking a while to respond. Nano can not run without the server, hence it will stay dormant.")
 		end
-		
+
 		if task.wait(20) and waitingforserver then
 			warn(-1,"The server is taking too long to respond. Missing responses:"..missing());
-			queueNotification("http://www.roblox.com/asset/?id=6031071057","Applied default data to missing data. Open Developer Console and look for what changed.")
+			queueNotification("http://www.roblox.com/asset/?id=6031071057","Nano has failed to get a response from the server, please attempt to rejoin the server.")
 		end
 	end;
 end)
@@ -498,6 +508,10 @@ local function runHint(title,message,icon)
 end
 
 local function buildButtons(cmds) -- Build the UI button.
+	-- Clear the mouse-hover info if it exists.
+	mfollow.Hover_2d.Visible = false;
+
+	-- Continue the building
 	local commands_layout = {}
 	for _,v in pairs(scroll:GetChildren()) do
 		if v:IsA("TextButton") then
@@ -556,7 +570,7 @@ local function buildButtons(cmds) -- Build the UI button.
 		end)
 		for k, cmd in pairs(folder) do -- For each command; Commands are built like this; {{commanddata}, "parentfolder"}
 			if cmd[1].InGui then -- Check if the command should be built in the UI in the first place. Usually disabled for debug commands only.
-				
+
 				local parentfolder = cmd[2]; -- QoL; Get the parent folder.
 				local cmd = cmd[1]; -- QoL; No need to use cmd[1] everytime. Besides, we already got the parent folder.
 				local btn = NanoWorks:NewAsset("command",{Key = k; Text = string.gsub(cmd.Name,"_"," "); Category = titl.Name; Hint = cmd.Description and cmd.Description.Short or nil; Color = cmd.Color})
@@ -587,15 +601,23 @@ local function buildButtons(cmds) -- Build the UI button.
 				task.spawn(function()
 					if type(cmd.Credit) == "table" and cmd.Credit[1] and settings.ShowCommandContributions[2] then
 						local building = "";
-						local users = game:GetService("UserService"):GetUserInfosByUserIdsAsync(cmd.Credit)
-						for pos,user in pairs(users) do
-							if not resolveCache[user.Id] then resolveCache[user.Id] = user.Username end;
-							if pos == 1 then
-								building = "By "..user.Username
-							elseif pos == #users then
-								building ..= " and "..user.Username
+						local checking = cmd.Credit
+						local users = {};
+						for key,id in pairs(cmd.Credit) do
+							if resolveCache[id] then
+								table.insert(users,resolveCache[id]);
 							else
-								building ..= ", "..user.Username
+								resolveCache[id] = game:GetService("Players"):GetNameFromUserIdAsync(id);
+								table.insert(users,resolveCache[id]);
+							end
+						end
+						for pos,user in pairs(users) do
+							if pos == 1 then
+								building = "By "..user
+							elseif pos == #users then
+								building ..= " and "..user
+							else
+								building ..= ", "..user
 							end
 						end
 						btn.self:WaitForChild("Credit").Text = building
@@ -663,7 +685,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							p.Parent = inn;
 							]]
 							p = NanoWorks:NewAsset("PlayerDropdown",{Key = k; Text = field.Text;})
-							
+
 							if field.Required then
 								p.self.Txt.Text ..= "<font color=\"#ff2121\"><b>*</b></font>"
 							end
@@ -724,17 +746,17 @@ local function buildButtons(cmds) -- Build the UI button.
 									p.Visible = false;
 								end
 							end
-							
+
 							p.self:FindFirstChild("Value").Changed:Connect(function(newval)
 								bind:Fire("CommandChangedValue",remote:InvokeServer("CommandChangedValue",{cmd.Name,k,newval}));
 							end)
 						end
 
-						
+
 					end
 
 					local receiveddata = remote:InvokeServer("CommandOpened",cmd.Name);
-					
+
 					local pressed = false;
 					sendEvent = command.Send.MouseButton1Click:Connect(function()
 						if pressed then return end;
@@ -779,11 +801,11 @@ local function buildButtons(cmds) -- Build the UI button.
 							if type(done[2]) == "boolean" and done[2] then
 								local times = 10
 								repeat
-									command.CommandSent.Spinner.Rotation += 35
+									command.CommandSent.Spinner.Rotation += (35 + ((times-10)*10))
 									task.wait();
 									times -= 1
 								until times == 0
-								command.CommandSent.TextLabel.Text = "Success!"
+								command.CommandSent.TextLabel.Text = done[3] or "Success!"
 								if settings and settings.Sounds and settings.Sounds[2] == true then
 									script.Sounds.SendingData:Stop();
 									script.Sounds.DataSent:Play();
@@ -793,7 +815,7 @@ local function buildButtons(cmds) -- Build the UI button.
 							elseif type(done[2]) == "nil" then
 								local times = 10
 								repeat
-									command.CommandSent.Spinner.Rotation += 35
+									command.CommandSent.Spinner.Rotation += (35 + ((times-10)*10))
 									task.wait();
 									times -= 1
 								until times == 0
@@ -807,22 +829,21 @@ local function buildButtons(cmds) -- Build the UI button.
 							elseif type(done[2]) == "boolean" then
 								local times = 10
 								repeat
-									command.CommandSent.Spinner.Rotation += 35
+									command.CommandSent.Spinner.Rotation += (35 + ((times-10)*10))
 									task.wait();
 									times -= 1
 								until times == 0
-								command.CommandSent.TextLabel.Text = "An error has occured!"
+								command.CommandSent.TextLabel.Text = done[3] or "Failed.."
 								if settings and settings.Sounds and settings.Sounds[2] == true then
 									script.Sounds.SendingData:Stop();
 									script.Sounds.DataSent:Play();
 								end
 								command.CommandSent.Spinner.Visible = false
 								command.CommandSent.Error.Visible = true
-								
 							else
 								local times = 10
 								repeat
-									command.CommandSent.Spinner.Rotation += 35
+									command.CommandSent.Spinner.Rotation += (35 + ((times-10)*10))
 									task.wait();
 									times -= 1
 								until times == 0
@@ -831,8 +852,8 @@ local function buildButtons(cmds) -- Build the UI button.
 								command.CommandSent.Nil.Visible = true
 							end
 						end)
-						local r = remote:InvokeServer("SendCommand",strin)
-						done = {true,r};
+						local r,data = remote:InvokeServer("SendCommand",strin)
+						done = {true,r,data};
 						task.wait(2.5)
 						command.Visible = false;
 						command.CommandSent.Visible = false
@@ -847,6 +868,23 @@ local function buildButtons(cmds) -- Build the UI button.
 			end
 		end
 		highestOrder+=256;
+	end
+
+	for _,v in pairs(scroll:GetChildren()) do
+		if v:IsA("TextButton") and v:FindFirstChild("HoverHint") then
+			local MouseEnter, MouseLeave = MouseOverModule.MouseEnterLeaveEvent(v)
+
+			MouseEnter:Connect(function()
+				if mouseinUI and scroll.Visible and v.Visible then
+					mfollow.Hover_2d.Text = " <b>"..v.Text.."</b>\n"..v.HoverHint.Value;
+					mfollow.Hover_2d.Visible = true;
+				end
+			end)
+
+			MouseLeave:Connect(function()
+				mfollow.Hover_2d.Visible = false;
+			end)
+		end
 	end
 end
 
@@ -877,7 +915,7 @@ end)
 main.Frame.Refresh.ImageColor3 = Color3.new(1,1,1)
 
 local function NewHighlight(character:Instance)
-	
+
 	if character:FindFirstChildOfClass("Highlight") then
 		character:FindFirstChildOfClass("Highlight"):Destroy();
 		character:FindFirstChild("Nano_Highlight"):Destroy();
@@ -944,8 +982,6 @@ scroll.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(func
 	scroll.CanvasSize = UDim2.new(0, absolute_size.X, 0, absolute_size.Y)
 end)
 
-local mouseinUI = false;
-
 local MouseEnter, MouseLeave = MouseOverModule.MouseEnterLeaveEvent(main)
 
 MouseEnter:Connect(function()
@@ -956,32 +992,14 @@ MouseLeave:Connect(function()
 	mouseinUI = false;
 end)
 
-
-for _,v in pairs(scroll:GetChildren()) do
-	if v:IsA("TextButton") and v:FindFirstChild("HoverHint") then
-		local MouseEnter, MouseLeave = MouseOverModule.MouseEnterLeaveEvent(v)
-
-		MouseEnter:Connect(function()
-			if mouseinUI and scroll.Visible and v.Visible then
-				mfollow.Hover_2d.Text = " <b>"..v.Text.."</b>\n"..v.HoverHint.Value;
-				mfollow.Hover_2d.Visible = true;
-			end
-		end)
-
-		MouseLeave:Connect(function()
-			mfollow.Hover_2d.Visible = false;
-		end)
-	end
-end
-
 local rankCache = {};
 
 mouse.Move:Connect(function()
 	mfollow.Position = UDim2.fromOffset(mouse.X+3,mouse.Y+40);
 	if mouse.Target and mouse.Target:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and mouse.Target:FindFirstAncestorOfClass("Model"):FindFirstChild("Humanoid") and not mouseinUI then
 		local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+		if not mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart then mfollow.Hover_3d.Text = ""; mfollow.Hover_3d.Visible = false; return; end;
 		local pos1 = char.HumanoidRootPart.Position
-		if not mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart then mfollow.Hover_3d.Text = ""; mfollow.Hover_3d.Visible = false; end;
 		local pos2 = mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart.Position
 		mfollow.Hover_3d.Text = " <b>"..mouse.Target:FindFirstAncestorWhichIsA("Model").Name.. "</b>\nDistance: "..math.floor((pos1 - pos2).magnitude).." Studs"
 		if game:GetService("Players"):GetPlayerFromCharacter(mouse.Target:FindFirstAncestorWhichIsA("Model")) then
@@ -1301,7 +1319,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 	Assets.Intro:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
 		button.self.BackgroundColor3 = Assets.Intro.BackgroundColor3;
 	end)
-	
+
 	button.self.Parent = s;
 	button.self.LayoutOrder = 1;
 	button.event:Connect(function()
@@ -1312,16 +1330,16 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 		local sets = remote:InvokeServer("GetGameSettings"); -- double check moment?
 		local plrs = remote:InvokeServer("GetSetting","Players"); -- oof
 		local mods,modsactive = remote:InvokeServer("GetModSettings");
-		
+
 		if remote:InvokeServer("GetSetting","CloudAPI").Token.UseToken then
 			script.Parent.Settings.API_Status.Visible = true;
 			script.Parent.Settings.API_Status.Text = 'CloudAPI Status: <font color="#ff7700">Checking</font>'
-			
+
 			task.spawn(function()
 				local s,val = pcall(function()
 					return remote:InvokeServer("GetAPIStatus")
 				end)
-				
+
 				if s then
 					if val == true then
 						script.Parent.Settings.API_Status.Text = 'CloudAPI Status: <font color="#00ff00">Active</font>'
@@ -1332,11 +1350,11 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					script.Parent.Settings.API_Status.Text = 'CloudAPI Status: <font color="#ff0000">Check failed</font>'
 				end
 			end)
-			
+
 		else
 			script.Parent.Settings.API_Status.Visible = false;
 		end
-		
+
 		-- returns;
 		--[[
 		
@@ -1369,7 +1387,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					elseif typeof(setting) ~= "Color3" then -- For some reason it won't accept Color3 in the server.
 						asset = NanoWorks:NewAsset(typeof(setting),{Name = category});
 					end
-					
+
 					if asset then
 						asset.self.Parent = parent;
 						asset.event:Connect(function(newval)
@@ -1378,7 +1396,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 							end
 						end)
 					elseif typeof(setting) == "Color3" then
-						
+
 					elseif type(setting) == "table" then
 						gameBubble(setting,prev..category..".",parent,stack+1);
 					end
@@ -1405,11 +1423,114 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 				elseif v["Name"] then
 					bubble = NanoWorks:CreateBubble(v.Name);
 				elseif v["Group"] then
-					-- That's a group thing :eyes:
+					if nightly then
+						print("Nano Client | Group type was found!")
+					end
+					-- It has to be handled separately due to how the tables here work.
+					-- Github copilot may or may not have been used here...
+
 					local group = game:GetService("GroupService"):GetGroupInfoAsync(v.Group);
 					bubble = NanoWorks:CreateBubble("Group - "..group.Name);
-					bubble:AddAsset("message",{Text = "Group editing is not (yet) supported. Sorry for the inconvenience."});
-					bubble.self.Parent = parent
+					-- bubble:AddAsset("message",{Text = "Group editing is not (yet) supported. Sorry for the inconvenience."});
+
+					local rolenames = {}
+
+					for _,v in pairs(group.Roles) do
+						if nightly then
+							print("Nano Client | Added role "..tostring(v.Rank).." as "..tostring(v.Name))
+						end
+						rolenames[tonumber(v.Rank)] = v.Name;
+					end
+
+					for rank,flg in pairs(v.Rank) do
+						if nightly then
+							print("Nano Client | Building for "..rank)
+						end
+						print("Nano Client |",rank,rolenames[tonumber(rank)]);
+						local rnk = NanoWorks:CreateBubble("Rank - "..(rolenames[tonumber(rank)] or tostring(rank)));
+						rnk.self.Parent = bubble.self.Outer.Inner;
+						rnk.self.Visible = true;
+						
+						rnk.self.LayoutOrder = math.abs(255-rank);
+						
+						-- Create a default permissions table.
+						local defaults = {
+							Chat = false;
+							UI = false;
+							Flags = "";
+							Key = "Non-Admin";
+							Immunity = 1; -- Considering they're here, it SHOULD be at least 1.
+						}
+
+						-- Get type of permission; if it's a string, it uses a flaggroup, otherwise it's a specific perm-system, hence it checks for that to see which type of bubble it should build for the rank.
+						if type(flg) == "string" then
+							local groups = {}
+							for group,_ in pairs(availablegroups) do
+								table.insert(groups,group);
+							end
+
+							local changer = rnk:AddAsset("CustomDropdown",{Name = "User FlagGroup"; Default = flg; Options = groups});
+							changer.event:Connect(function(newval)
+								-- Update the flaggroup for the group key
+								v.Rank[rank] = newval;
+
+								-- Send the update to the server.
+								if sendEvents then
+									remote:InvokeServer("SetPlayerData",{tonumber(k),v})
+								end
+							end)
+						elseif type(flg) == "table" then
+							for var,val in pairs(flg) do
+								defaults[var] = val;
+							end
+
+							local chatp = rnk:AddAsset("Boolean",{Key = "Chat", Name = "Can use the Chat for commands", Default = defaults.Chat});
+							local uip = rnk:AddAsset("Boolean",{Key = "UI", Name = "Can use Nano's Panel", Default = defaults.UI});
+							local flagsp = rnk:AddAsset("String",{Key = "Flags", Name = "Permissions / Flags", Default = defaults.Flags});
+							local keyp = rnk:AddAsset("String",{Key = "Key", Name = "Custom Group Name", Default = defaults.Key});
+							local immunityp = rnk:AddAsset("Number",{Key = "Immunity", Name = "Immunity Level (0 - 255)", Default = defaults.Immunity});
+
+							chatp.event:Connect(function(newval)
+								v.Rank[rank].Chat = newval;
+								if sendEvents then
+									remote:InvokeServer("SetPlayerData",{tonumber(k),v})
+								end
+							end)
+							uip.event:Connect(function(newval)
+								v.Rank[rank].UI = newval;
+								if sendEvents then
+									remote:InvokeServer("SetPlayerData",{tonumber(k),v})
+								end
+							end)
+							flagsp.event:Connect(function(newval)
+								v.Rank[rank].Flags = newval;
+								if sendEvents then
+									remote:InvokeServer("SetPlayerData",{tonumber(k),v})
+								end
+							end)
+							keyp.event:Connect(function(newval)
+								v.Rank[rank].Key = newval;
+								if sendEvents then
+									remote:InvokeServer("SetPlayerData",{tonumber(k),v})
+								end
+							end)
+							immunityp.event:Connect(function(newval)
+								v.Rank[rank].Immunity = newval;
+								if sendEvents then
+									remote:InvokeServer("SetPlayerData",{tonumber(k),v})
+								end
+							end)
+						else
+							-- If it's not a string nor a table, it's considered a corrupted rank, hence it'll result in a message bubble.
+							rnk:AddAsset("message",{Text = "This rank has a corrupted administration key; Please use a datastore editor to edit this part out.",Color = Color3.new(1, 0.266667, 0.266667)})
+						end
+						
+						bubble:Insert(rnk);
+					end
+
+					bubble.self.Name = k;
+					bubble.self.Parent = parent;
+					bubble.self.Visible = true;
 					continue
 				elseif v["Gamepass"] then
 					-- Gamepass thing :eyes:
@@ -1431,7 +1552,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 				bubble.self.Name = k;
 				bubble.self.Parent = parent;
 				bubble.self.Visible = true;
-				
+
 				local vals = {
 					Chat = false;
 					UI = false;
@@ -1439,19 +1560,19 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					Key = "Non-Admin";
 					Immunity = 1; -- Considering they're here, it SHOULD be at least 1.
 				}
-				
+
 				if type(v.FlagGroup) == "table" then
 					for var,val in pairs(v.FlagGroup) do
 						vals[var] = val;
 					end
-					
+
 					local chatp = bubble:AddAsset("Boolean",{Key = "Chat", Name = "Can use the Chat for commands", Default = vals.Chat});
 					local uip = bubble:AddAsset("Boolean",{Key = "UI", Name = "Can use Nano's Panel", Default = vals.UI});
 					local flagsp = bubble:AddAsset("String",{Key = "Flags", Name = "Permissions / Flags", Default = vals.Flags});
 					local keyp = bubble:AddAsset("String",{Key = "Key", Name = "Custom Group Name", Default = vals.Key});
 					local immunityp = bubble:AddAsset("Number",{Key = "Immunity", Name = "Immunity Level (0 - 255)", Default = vals.Immunity});
 					local delete = bubble:AddAsset("Button",{Key = "Delete", Name = "Delete Administration Key", Color = Color3.new(1, 0.266667, 0.266667)})
-					
+
 					chatp.event:Connect(function(newval)
 						vals.Chat = newval
 						if sendEvents then
@@ -1501,7 +1622,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					for group,_ in pairs(availablegroups) do
 						table.insert(groups,group);
 					end
-					
+
 					local changer = bubble:AddAsset("CustomDropdown",{Name = "User FlagGroup"; Default = v.FlagGroup; Options = groups});
 					changer.event:Connect(function(newval)
 						vals.Flags = newval
@@ -1509,7 +1630,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 							remote:InvokeServer("SetPlayerData",{tonumber(k),newval})
 						end
 					end)
-					
+
 					local delete = bubble:AddAsset("Button",{Key = "Delete", Name = "Delete Administration Key", Color = Color3.new(1, 0.266667, 0.266667)})
 					delete.event:Connect(function()
 						if delete.self.Btn.Text == "Delete Administration Key" then
@@ -1544,21 +1665,21 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					end)
 				end
 			end
-			
+
 			local bubble = NanoWorks:CreateBubble("Create New Key")
 			bubble.self.Name = "newmember";
 			bubble.self.Parent = parent;
 			bubble.self.Visible = true;
-			
+
 			local groups = {"Custom"};
 			for k,_ in pairs(availablegroups) do
 				table.insert(groups,k);
 			end
-			
+
 			local useridf = bubble:AddAsset("String",{Key = "useridf", Name = "Player Identifier (Username | ID)"});
 			local groupf = bubble:AddAsset("CustomDropdown",{Name = "User FlagGroup"; Default = "Custom"; Options = groups});
 			local btn = bubble:AddAsset("Button",{Key = "create",Name = "Click here to create the new key!", Color = Color3.new(1, 0.333333, 0)});
-			
+
 			local debounce = false;
 			btn.event:Connect(function()
 				if debounce then return end;
@@ -1567,7 +1688,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					task.wait(10);
 					debounce = false;
 				end)
-				
+
 				remote:InvokeServer("NewPlayerData",useridf.self.Value.Value,groupf.self.Value.Value);
 			end)
 		end
@@ -1660,11 +1781,11 @@ main.Frame.Chatlogs.MouseButton1Click:Connect(function()
 			if k > 100 then
 				break;
 			end
-			
+
 			NanoWorks:NewAsset("message",{Text = os.date("%X",v[1]).. " | "..game:GetService("Players"):GetNameFromUserIdAsync(v[2]).." | "..v[3]}).self.Parent = main.TopUI.Chatlogs;
 		end
 	end
-	
+
 	if main.TopUI.Visible == true and main.TopUI.Chatlogs.Visible == true then
 		main.TopUI.Visible = false;
 	else
@@ -1722,11 +1843,25 @@ for _,v in pairs(main.Frame:GetChildren()) do
 	end
 end
 
+-- Check if nightly; If yes, send time took to load.
+if nightly then
+	print("Nano Nightly (Client) | Loaded! Time took to load: " .. math.abs(os.clock() - startTime) .. " seconds.");
+end
+
 --Initial ping update
 local starttick = tick();
 local res = math.floor(math.abs(tick() - starttick) * 1000)
 remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
 main.Ping.ms.Text = tostring(res).."ms"
+
+local PingSentences = {
+	"HOW DID YOUR PING GET THIS HIGH?",
+	"RIP PING LOL",
+	"YOUR INTERNET JUST NOPED OUT",
+	"GOOD JOB,YOU DONE BROKE THE INTERNET",
+	"MCDONALDS WIFI MUST SUCK HUH?",
+	"WHEN ARE YOU GOING TO GET BETTER INTERNET?"
+}
 
 task.spawn(function()
 	while task.wait(2) do -- PINGER
@@ -1738,29 +1873,36 @@ task.spawn(function()
 		main.Ping.ms.Text = tostring(res).."ms"
 		-- Get image by category; Low, Med, High or V.High
 		if res >= 1000 then
-			main.Ping.ms.Text = ">999ms"
-			main.Ping.ImageColor3 = Color3.new(0.470588, 0, 0)
+			main.Ping.ms.TextColor3 = Color3.new(1, 0, 0)
+			main.Ping.ImageColor3 = Color3.new(1, 0, 0)
+			main.Ping.Image = "rbxassetid://10588582228"
+			local RandomText = PingSentences[math.random(1, #PingSentences)] 
+			TickerModule:Smoothify(RandomText,main.Ping.ms,5)
 		elseif res >= 500 then -- Critically High
 			main.Ping.Image = "rbxassetid://9189318676"
-			main.Ping.ImageColor3 = Color3.new(0.666667,0,0)
+			main.Ping.ImageColor3 = Color3.new(1, 0.388235, 0.0823529)
+			main.Ping.ms.TextColor3 = Color3.new(1, 0.388235, 0.0823529)
 		elseif res >= 350 then -- Very High
 			main.Ping.Image = "rbxassetid://9189318676"
-			main.Ping.ImageColor3 = Color3.new(1,0.266667,0.266667)
+			main.Ping.ImageColor3 = Color3.new(1, 0.654902, 0.309804)
+			main.Ping.ms.TextColor3 = Color3.new(1, 0.654902, 0.309804)
 		elseif res >= 200 then -- High
 			main.Ping.Image = "rbxassetid://9189319364"
 			main.Ping.ImageColor3 = Color3.new(1,0.666667,0.2)
+			main.Ping.ms.TextColor3 = Color3.new(1,0.666667,0.2)
 		elseif res >= 125 then -- Medium
 			main.Ping.Image = "rbxassetid://9189318742"
 			main.Ping.ImageColor3 = Color3.new(1,1,0.498039)
+			main.Ping.ms.TextColor3 = Color3.new(1,1,0.498039)
 		elseif res <= 50 then -- Very Low
 			main.Ping.Image = "rbxassetid://9189319213"
-			main.Ping.ImageColor3 = Color3.new(0.635294,1,0.909804)
+			main.Ping.ImageColor3 = Color3.new(0.333333, 1, 0.498039)
+			main.Ping.ms.TextColor3 = Color3.new(0.333333, 1, 0.498039)
+			
 		else -- Low
 			main.Ping.Image = "rbxassetid://9189319213"
-			main.Ping.ImageColor3 = Color3.new(1,1,1)
+			main.Ping.ImageColor3 = Color3.new(0.333333, 1, 0)
+			main.Ping.ms.TextColor3 = Color3.new(0.333333, 1, 0)
 		end
-		
-		-- Get errors and chatlogs from the server.
-		
 	end
 end)

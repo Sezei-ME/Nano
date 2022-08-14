@@ -9,6 +9,43 @@ return function(settings)
 	local deprecation = false;
 	local info = {};
 	
+	if type(settings.UI) == "table" then
+		-- It's a new loader!
+		if type(settings.UI.Size) == "table" then
+			if not type(settings.UI.Size.Width) == "number" then
+				settings.UI.Size.Width = 258;
+				table.insert(info,"UI Width was missing");
+			end
+			if not type(settings.UI.Size.Height) == "number" then
+				settings.UI.Size.Height = 245;
+				table.insert(info,"UI Height was missing");
+			end
+			if settings.UI.Size.Width < 230 then
+				settings.UI.Size.Width = 230;
+				table.insert(info,"UI Width was below 230");
+			end
+			if settings.UI.Size.Height < 245 then
+				settings.UI.Size.Height = 250;
+				table.insert(info,"UI Height was below 245");
+			end
+		else
+			settings.UI = {
+				Size = {
+					Width = 258;
+					Height = 245;
+				};
+			}
+			table.insert(info,"UI setting was not a valid table");
+		end
+	else
+		settings.UI = {
+			Size = {
+				Width = 258;
+				Height = 245;
+			};
+		}
+	end
+	
 	if type(settings.CloudAPI) == "table" and type(settings.CloudAPI.UseGlobalBanlist) == "boolean" then
 		-- Not a deprecation, it's a mistake from my side, therefore this will not be removed, nor changed. - Binary
 		settings.CloudAPI.UseBanlist = settings.CloudAPI.UseGlobalBanlist;
@@ -142,45 +179,24 @@ return function(settings)
 			end
 		else
 			if tonumber(v.Group) then
-				if not v.Rank and not v.Ranks then
+				if v.Ranks and not v.Rank then
+					v.Rank = {};
+					for k,v in pairs(v.Ranks) do
+						v.Rank[k] = v;
+					end	
+					
+					v.Ranks = nil; -- Clear unneeded data to save space in the table.
+				end;
+				
+				if not v.Rank then
 					erroring = true;
 					table.insert(errors,"Player key \""..k.."\": Group Ranking table was not provided.");
-				elseif type(v.Rank) ~= "table" and type(v.Ranks) ~= "table" then
+				elseif type(v.Rank) ~= "table" then
 					erroring = true;
-					table.insert(errors,"Player key \""..k.."\": Group Ranking table is malformed; expected table, got "..(v.Rank and typeof(v.Rank) or v.Ranks and typeof(v.Ranks))..".");
+					table.insert(errors,"Player key \""..k.."\": Group Ranking table is malformed; expected table, got "..(v.Rank and typeof(v.Rank))..".");
 				else
 					if v.Rank then
 						for rank,flag in pairs(v.Rank) do
-							if not tonumber(rank) then
-								erroring = true;
-								table.insert(errors,"Player key \""..k.."\": Malformed rank: Expected a number.");
-							elseif tonumber(rank) >= 256 or tonumber(rank) <= -1 then
-								erroring = true;
-								table.insert(errors,"Player key \""..k.."\": Malformed rank: Rank must be between 0 and 255.");
-							elseif type(flag) == "string" then
-								if not settings.FlagGroups[flag] then
-									erroring = true;
-									table.insert(errors,"Group key \""..rank.."\": No such FlagGroup exists: \""..flag.."\"");
-								end
-							elseif type(flag) == "table" then
-								if not flag.Key then
-									erroring = true;
-									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Key variable not provided.");
-								end
-
-								if not flag.Immunity then
-									erroring = true;
-									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Immunity variable not provided.");
-								end
-
-								if not flag.Flags then
-									erroring = true;
-									table.insert(errors,"Group key \""..rank.."\": Custom FlagGroup error: Flags not provided.");
-								end
-							end
-						end
-					elseif v.Ranks then
-						for rank,flag in pairs(v.Ranks) do
 							if not tonumber(rank) then
 								erroring = true;
 								table.insert(errors,"Player key \""..k.."\": Malformed rank: Expected a number.");

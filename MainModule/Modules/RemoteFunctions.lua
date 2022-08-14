@@ -188,7 +188,9 @@ return function(api)
 				elseif api.Data.Settings.Players[reason[1]].Group then
 					local groupdata = game:GetService("GroupService"):GetGroupInfoAsync(api.Data.Settings.Players[reason[1]].Group)
 					
-					--TODO--
+					api.Data.Settings.Players[reason[1]] = reason[2];
+					api.Store():Save("Nano_Settings",api.Data.Settings):wait();
+					api.MetaPlayer(api,player):Notify({"bulb","You changed group data for "..groupdata.Name});
 				elseif api.Data.Settings.Players[reason[1]].Default then
 					if type(api.Data.Settings.Players[reason[1]].FlagGroup) == "table" then
 						api.Data.Settings.Players[reason[1]].FlagGroup[reason[2]] = reason[3];
@@ -294,7 +296,7 @@ return function(api)
 				end
 			end
 		elseif key == "SendPrivateMessage" then
-			return event:FireClient(game:GetService("Players"):GetPlayerByUserId(reason[1]),"PrivateMessage",{player.UserId,reason[2]})
+			return event:FireClient(game:GetService("Players"):GetPlayerByUserId(reason[1]),"PrivateMessage",{player.UserId,api.TextFilter(reason[2],player)})
 		elseif key == "CommandChangedValue" then
 			-- {command, field, value}
 			local cmd = reason[1]

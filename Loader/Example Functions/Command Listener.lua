@@ -9,6 +9,6 @@ function module._nano.load(api)
 	end);
 end
 
-module._nano.addtoEnv = false; -- Prevent Nano from being 
+module._nano.addtoEnv = false; -- Prevent Nano from adding this module into itself.
 
 return module

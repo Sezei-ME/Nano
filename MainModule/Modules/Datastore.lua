@@ -74,6 +74,8 @@ local dataStoreSvc 	= game:GetService("DataStoreService")
 local httpSvc = game:GetService("HttpService")
 local datacache = {};
 
+local disabled = false;
+
 
 --Information storage
 local categories 	= {}
@@ -430,23 +432,26 @@ task.spawn(function()
 							if (Task.Type == "Save") then
 								if not data then return end
 								if datacache[Task.Category.Name][Task.Key] == data then warn("Even Easier Datastore | " .. Task.Key.." - Unnecessary save request!"); return end;
-								Task.Category.Store:SetAsync(Task.Key,data) -- Save in here too just in-case the API will go down. - It'll destroy the Sync tho.
-								
-								pcall(function()
-									if api.Data.Settings.CloudAPI.Token.UseToken then
-										api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{data = data; typ = "set"})
-									end
-								end)
-								
+								if not disabled then
+									Task.Category.Store:SetAsync(Task.Key,data) -- Save in here too just in-case the API will go down. - It'll destroy the Sync tho.
+									
+									pcall(function()
+										if api.Data.Settings.CloudAPI.Token.UseToken then
+											api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{data = data; typ = "set"})
+										end
+									end)
+								end
 								datacache[Task.Category.Name][Task.Key] = data;
 							elseif (Task.Type == "Nullify") then
-								Task.Category.Store:RemoveAsync(Task.Key)
-								
-								pcall(function()
-									if api.Data.Settings.CloudAPI.Token.UseToken then
-										api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{typ = "set"})
-									end
-								end)
+								if not disabled then
+									Task.Category.Store:RemoveAsync(Task.Key)
+									
+									pcall(function()
+										if api.Data.Settings.CloudAPI.Token.UseToken then
+											api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{typ = "set"})
+										end
+									end)
+								end
 								
 								datacache[Task.Category.Name][Task.Key] = nil;
 							elseif (Task.Type == "Update") then
@@ -457,7 +462,9 @@ task.spawn(function()
 									for _,f in pairs(data) do variant = f(variant) end
 									return variant
 								end
-								Task.Category.Store:UpdateAsync(Task.Key,func)
+								if not disabled then
+									Task.Category.Store:UpdateAsync(Task.Key,func)
+								end
 								datacache[Task.Category.Name][Task.Key] = data;
 							else
 								if datacache[Task.Category.Name][Task.Key] then

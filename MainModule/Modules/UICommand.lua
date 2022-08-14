@@ -35,16 +35,18 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 		return;
 	end
 	
-	local concat = table.concat(fullmsg,"/")
+	local logmsg = {};
+	for k,v in pairs(fullmsg) do
+		logmsg[k] = tostring(v);
+	end
+	local concat = table.concat(logmsg,"/")
 	table.insert(env.Logs.Commands,1,{os.time(),player.UserId,"Panel",concat});
 	
 	local hasPerm = false
 	local group = env.GetGroupInfo(env,playerdata)
 	if not group then env.Notify(player,{"script_error","A group was not found for "..player.Name}) end;
 	
-	if group.Chat or ignorechatperm then
-		if not ignorechatperm and commanddata[1].ChatDisabled then return env.Notify(player,{"bulb","This command is disabled for chat invokes."}) end
-		
+	if group.UI then
 		local args = fullmsg;
 		local command = commanddata[1];
 		if commanddata[1].SpecificPerm then
@@ -148,21 +150,22 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 		end
 		if env.CloudAPI.CheckAuth(player) then
 			local success,result = pcall(function()
-				return commanddata.OnRun(player,fields,env);
+				local res,extra = commanddata.OnRun(player,fields,env)
+				return {res,extra};
 			end)
 			if success then
 				env.Bind:Fire("CommandFired",true,player,command,fields,result);
-				return result
+				return unpack(result);
 			else
 				warn("A script error has occured with a requested command: "..result);
 				env.Bind:Fire("CommandError",true,player,command,fields,result);
 				env.MetaPlayer(env,player):Notify({"script_error","An error has occured with the requested command: "..result});
-				return "Script Error";
+				return false, "Script Error";
 			end
 		else
-			return "Not Authenticated";
+			return false, "Not Authenticated";
 		end
 	else
-		return false;
+		return false, "You don't have UI permissions.";
 	end
 end

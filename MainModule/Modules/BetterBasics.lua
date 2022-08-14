@@ -26,6 +26,17 @@ function module.table.fullclone(t)
 	return new;
 end
 
+function module.table.median(t)
+	local size = #t
+	local half = math.floor(size/2)
+	
+	if size % 2 == 1 then
+		return t[half]
+	else
+		return (t[half] + t[half+1])/2
+	end
+end
+
 function module.string.placeholder(origin,placeholders)
 	local s:string = tostring(origin);
 

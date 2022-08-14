@@ -283,7 +283,17 @@ function module:CreateBubble(name)
 		bubble.self.Outer.Inner.Title.Visible = false;
 	end
 	function bubble:Insert(asset:Instance)
+		local event:RBXScriptSignal = bubble.self.Outer.Inner.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize")
+		
+		local connection = event:Connect(function()
+			bubble.self.Size = UDim2.new(1,-10,0,bubble.self.Outer.Inner.UIListLayout.AbsoluteContentSize.Y+12);
+		end)
+		
 		asset.Parent = bubble.self.Outer.Inner
+		
+		task.delay(2,function()
+			connection:Disconnect();
+		end)
 	end
 	function bubble:AddAsset(typ,options)
 		local asset = module:NewAsset(typ,options);

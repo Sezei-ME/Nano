@@ -123,7 +123,17 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 						fields[field.Internal] = nil
 					end
 				elseif string.lower(field.Type) == "players" then
-					fields[field.Internal] = FindPlayers(player,v) or {};
+					-- split the string into a table, separated by spaces, considering it's looking for multiple players
+					local plrs = {}
+					for _,v in pairs(string.split(v," ")) do
+						local plr = FindPlayers(player,v);
+						if plr and plr[1] then
+							table.insert(plrs,plr[1])
+						end
+					end
+
+					-- since plrs is a table, we don't need to check if it's empty or not, it should be already handled by the commands.
+					fields[field.Internal] = plrs;
 				elseif string.lower(field.Type) == "safeplayer" then
 					local plr = FindPlayers(player,v)[1] or nil;
 					if plr then

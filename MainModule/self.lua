@@ -17,6 +17,12 @@ if script:FindFirstChild("WARNING - THIS IS A BETA BUILD!") then
 	betabuild = true;
 	env.NightlyBuild = true;
 	env.InternalBuild = "NIGHTLY "..env.TrueBuild;
+	
+	local nightlyval = Instance.new("BoolValue",script.NanoUI);
+	nightlyval.Name = "NightlyBuild";
+	nightlyval.Value = true;
+	nightlyval.Parent = script.NanoUI;
+	
 	script:FindFirstChild("WARNING - THIS IS A BETA BUILD!"):Remove()
 end
 
@@ -357,10 +363,10 @@ function handleJoin(p)
 						env.Notify(p,{"bug","An error has occured with the command: "..f})
 					end
 				else
-					table.insert(env.Logs.Chat,1,{os.time(),p.UserId,msg});
+					table.insert(env.Logs.Chat,1,{os.time(),p.UserId,env.TextFilter(msg,p)});
 				end
 			else
-				table.insert(env.Logs.Chat,1,{os.time(),p.UserId,msg});
+				table.insert(env.Logs.Chat,1,{os.time(),p.UserId,env.TextFilter(msg,p)});
 			end
 		end
 
@@ -494,6 +500,9 @@ if firstCall then
 				end
 			end
 		end
+		
+		script.NanoUI.Main.Size = UDim2.fromOffset(env.Data.Settings.UI.Size.Width,env.Data.Settings.UI.Size.Height)
+		script.NanoUI.Main.Position = UDim2.new(0, -(env.Data.Settings.UI.Size.Width), 1, -10)
 
 		env.Data.Commands = {}
 		local s = toCommands(loader:FindFirstChild("Commands"));
