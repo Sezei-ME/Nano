@@ -2,8 +2,8 @@ local ds = nil;
 
 local TextService = game:GetService("TextService")
 local env = {
-	InternalBuild = "BETA_PRE3#9";
-	TrueBuild = 64; -- QA_BUILD[n]
+	InternalBuild = "BETA_PRE3#10";
+	TrueBuild = 66; -- QA_BUILD[n]
 	Data = {};
 	RemoteKeys = {};
 	Ingame = {Admins = {}; Bans = {}; };
@@ -16,6 +16,7 @@ local env = {
 		Intro_Top = "Nano";
 		Intro_Middle = "Created by Sezei.Me and Axelius";
 	};
+	GlobalBanlist = {};
 	MainModule = script.Parent;
 	Bind = script.Parent._Event;
 	-- Replaced the Errors = {} with this;
@@ -48,6 +49,7 @@ function env.TextFilter(txt,sender)
 	return tx:GetChatForUserAsync(sender.UserId);
 end
 
+-- Deprecated; Using the BetterBasics.string.placeholders function now.
 function env.BuildBanReason(player,bantype,banreason,timeleft)
 	if bantype == "server" then
 		if timeleft == math.huge then

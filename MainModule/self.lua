@@ -189,32 +189,41 @@ function handleJoin(p)
 			end
 
 			if env.Data.Settings.CloudAPI.UseBanlist then
-				local suc,dat = pcall(env.CloudAPI.Get,"/redefinea/banlist/"..p.UserId);
-				if suc then
-					if dat then
-						if dat.success then
-							if dat.active and dat.active == true then
-								env.Bind:Fire("JoinWhileBanned",p.UserId,dat.reason);
-								p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..dat.reason)
-							else
-								task.spawn(function()
-									local suc,ndat = pcall(env.CloudAPI.ListenForChange,"/redefinea/banlist/"..p.UserId,dat);
-									if suc then
-										repeat task.wait(120) until ndat.Data or not p;
-										ndat:Cancel();
-										ndat = ndat.Data;
-										if ndat and ndat.success and ndat.active and ndat.active == true then
-											env.Bind:Fire("JoinWhileBanned",p.UserId,ndat.reason);
-											p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..ndat.reason)
-											return
-										end
-									end
-								end)
-							end
+				local bandata = env.GlobalBanlist;
+
+				if bandata then
+					if bandata[p.UserId] then
+						local pinfo = bandata[p.UserId];
+						if pinfo.active and pinfo.active == true then
+							env.Bind:Fire("JoinWhileBanned",p.UserId,"Cloudban: "..pinfo.reason);
+							p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..pinfo.reason)
+						else
+							-- The player was banned before, but the ban is no longer active. We will keep track on them using task.spawn.
+							task.spawn(function()
+								repeat 
+									task.wait(60)
+									pinfo = bandata[p.UserId];
+								until pinfo.active or not p;
+								if pinfo.active and p then
+									p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..pinfo.reason)
+								end
+							end)
 						end
+					else
+						-- Player isn't banned, but it's better to still keep track on them using task.spawn in-case that changes.
+						task.spawn(function()
+							local pinfo = bandata[p.UserId];
+							repeat 
+								task.wait(120) -- Because they have no history of being banned, we can increase the check time from 60 seconds to 120 seconds because usually it means they have no reason to be checked again.
+								pinfo = bandata[p.UserId];
+							until pinfo.active or not p;
+							if pinfo.active and p then
+								p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..pinfo.reason)
+							end
+						end)
 					end
 				else
-					env.warn(4, "Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to an error: "..dat)
+					env.warn(4, "Couldn't verify whether "..p.Name.." is Cloud-Banned or not due to not being able to fetch the banlist.");
 				end
 			end
 
@@ -392,10 +401,15 @@ function handleJoin(p)
 
 	-- An error has occured.
 	if not success then
-		warn("Failed to handle player "..p.Name.." with error \""..err.."\"; Retrying in 2 seconds");
-		table.insert(env.Logs.Errors,{os.time(),"Failed to handle player "..p.Name});
-		task.wait(2);
-		return handleJoin(p);
+		if err == "Player not in datamodel" and not p.Parent then
+			warn("Failed to handle player "..p.Name.." due to them not being detected within the server; Not attempting a retry due to the error.");
+			table.insert(env.Logs.Errors,{os.time(),"Failed to handle player "..p.Name});
+		else
+			warn("Failed to handle player "..p.Name.." with error \""..err.."\"; Retrying in 2 seconds");
+			table.insert(env.Logs.Errors,{os.time(),"Failed to handle player "..p.Name});
+			task.wait(2);
+			return handleJoin(p);
+		end
 	end
 
 	-- No error has occured but they still have no admin role..?!?
@@ -410,13 +424,34 @@ function handleJoin(p)
 end
 
 task.spawn(function()
+	-- Initial check of the banlist.
+	local suc,dat = pcall(env.CloudAPI.Get,"/redefinea/banlist");
+	if suc and dat and dat.success then
+		env.GlobalBanlist = dat;
+	else
+		warn("Failed to update the global banlist! Is HTTPService enabled?");
+	end
+
+	local ticks = 4000; -- 60 seconds because task.wait() is ~0.015 seconds; 60/0.015 = 4000.
 	while task.wait() do
 		if loaded then
+			-- Check for new players.
 			if handlequeue[1] then
 				local success = handleJoin(game:GetService("Players"):GetPlayerByUserId(handlequeue[1]));
 				if success then
 					table.remove(handlequeue,1);
 				end
+			end
+		end
+
+		if ticks <= 0 then
+			-- Check the banlist again to see if any bans have updated.
+			ticks = 4000; -- Return the ticks counter to 60 before updating the banlist again.
+			local suc,dat = pcall(env.CloudAPI.Get,"/redefinea/banlist");
+			if suc and dat and dat.success then
+				env.GlobalBanlist = dat;
+			else
+				warn("Failed to update the global banlist!");
 			end
 		end
 	end
@@ -475,7 +510,7 @@ if firstCall then
 						loads+=1
 						local r = require(v) -- returned data
 						if r["_nano"] then
-							if not type(r["_nano"]["addtoEnv"]) == "boolean" or not r._nano.addtoEnv then
+							if not (type(r["_nano"]["addtoEnv"]) == "boolean") or not r._nano.addtoEnv then
 								if r["_nano"]["name"] then
 									env[r["_nano"]["name"]] = r
 								else

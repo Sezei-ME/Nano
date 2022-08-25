@@ -1,3 +1,5 @@
+-- Deprecated.
+
 local freezetbl = {}
 local vars = {}
 

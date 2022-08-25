@@ -76,6 +76,10 @@ local datacache = {};
 
 local disabled = false;
 
+-- Check if the game is running on a private server; Datastore shall NOT be edited if it is, but allow for the use of the API specifically for getting data.
+if (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then -- Checks if the game is running on a private server.
+	disabled = true; -- Disable the storage part of the module if it is.
+end
 
 --Information storage
 local categories 	= {}

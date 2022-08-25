@@ -1,8 +1,12 @@
-local function FindPlayers(Runner,Name)
-	local matches = {}
-	if string.len(Name) == 0 then return nil end
-	for i,v in next,game:GetService("Players"):GetPlayers() do
-		local matched = false;
+local function FindPlayers(Runner,Name) -- Function that finds players by name or displayname.
+	local matches = {} -- Table that will contain all the matches.
+	if string.len(Name) == 0 then return nil end -- If the name is empty, return nil.
+
+	-- Loop through all the players.
+	for _,v in next,game:GetService("Players"):GetPlayers() do
+		local matched = false; -- If a player has been matched, this will be set to true so they won't be matched again and again.
+
+		-- Because of the '@'; prioritise checking the username first before the displayname; Alongside that, it will also not check for the displayname.
 		local s1 = string.lower("@"..v.Name)
 		if s1:sub(1, #Name) == string.lower(Name) then
 			if not matched then
@@ -10,6 +14,8 @@ local function FindPlayers(Runner,Name)
 				matched = true;
 			end
 		end
+
+		-- Check for the displayname.
 		local s1 = string.lower(v.DisplayName)
 		if s1:sub(1, #Name) == string.lower(Name) then
 			if not matched then
@@ -17,6 +23,8 @@ local function FindPlayers(Runner,Name)
 				matched = true;
 			end
 		end
+
+		-- Check for the username.
 		local s1 = string.lower(v.Name)
 		if s1:sub(1, #Name) == string.lower(Name) then
 			if not matched then
@@ -24,7 +32,8 @@ local function FindPlayers(Runner,Name)
 				matched = true;
 			end
 		end
-		
+
+		-- If still not matched, check for power-aliases, such as 'me', 'all' or 'others'.
 		if not matched then
 			if string.lower(Name) == "me"  then
 				matches[#matches+1] = Runner
@@ -44,20 +53,24 @@ local function FindPlayers(Runner,Name)
 end
 
 return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
-	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then -- Chat has been used while it's disabled;
+	if not ignorechatperm and not env.Data.Settings.ChatCommands.Active then -- Chat has been used while it's disabled; hence don't do anything.
 		return;
 	end
+
+	-- Add the command to the logs.
 	table.insert(env.Logs.Commands,1,{os.time(),player.UserId,"Chat",fullmsg});
-	local hasPerm = false
+	
+	-- Check permissions.
 	local group = env.GetGroupInfo(env,playerdata)
 	if not group then env.Notify(player,{"script_error","A group was not found for "..player.Name}) end;
-	
+
+	-- Check if the player has permission to use the command.
 	if group.Chat or ignorechatperm then
 		if not ignorechatperm and commanddata[1].ChatDisabled then return env.Notify(player,{"bulb","This command is disabled for chat invokes."}) end
 		local fmsg = string.split(fullmsg," ");
 		table.remove(fmsg,1);
 		fullmsg = table.concat(fmsg," ");
-		
+
 		local args = string.split(fullmsg,env.Data.Settings.ChatCommands.Sep);
 		local command = commanddata[1];
 		if commanddata[1].SpecificPerm then
@@ -65,10 +78,10 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 		else
 			if not env.GetPlayerHasPermission(env,playerdata,commanddata[2]) then env.Notify(player,{"no_permission","Permission for this command is missing."}); return false end;
 		end
-		
+
 		local commanddata = commanddata[1]
 		local fields = {}
-		
+
 		for k,v in pairs(commanddata.Fields) do
 			if v.Required and not args[k] or v.Required and args[k] == "" or v.Required and args[k] == " " then 
 				env.Notify(player,{"unsuccessful","A required argument is missing; "..v.Text.." of type "..v.Type});
@@ -205,7 +218,7 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 		else
 			return "Not Authenticated";
 		end
-	else
+	else -- The player doesn't have permission to run the command, or the command has chat disabled.
 		return false;
 	end
 end

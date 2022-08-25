@@ -1450,9 +1450,9 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 						local rnk = NanoWorks:CreateBubble("Rank - "..(rolenames[tonumber(rank)] or tostring(rank)));
 						rnk.self.Parent = bubble.self.Outer.Inner;
 						rnk.self.Visible = true;
-						
+
 						rnk.self.LayoutOrder = math.abs(255-rank);
-						
+
 						-- Create a default permissions table.
 						local defaults = {
 							Chat = false;
@@ -1524,7 +1524,7 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 							-- If it's not a string nor a table, it's considered a corrupted rank, hence it'll result in a message bubble.
 							rnk:AddAsset("message",{Text = "This rank has a corrupted administration key; Please use a datastore editor to edit this part out.",Color = Color3.new(1, 0.266667, 0.266667)})
 						end
-						
+
 						bubble:Insert(rnk);
 					end
 
@@ -1876,8 +1876,11 @@ task.spawn(function()
 			main.Ping.ms.TextColor3 = Color3.new(1, 0, 0)
 			main.Ping.ImageColor3 = Color3.new(1, 0, 0)
 			main.Ping.Image = "rbxassetid://10588582228"
+			--[[
+			-- Disabled until we manage to find a way to remove this part when the ping returns to normal.
 			local RandomText = PingSentences[math.random(1, #PingSentences)] 
 			TickerModule:Smoothify(RandomText,main.Ping.ms,5)
+			--]]
 		elseif res >= 500 then -- Critically High
 			main.Ping.Image = "rbxassetid://9189318676"
 			main.Ping.ImageColor3 = Color3.new(1, 0.388235, 0.0823529)
@@ -1898,7 +1901,6 @@ task.spawn(function()
 			main.Ping.Image = "rbxassetid://9189319213"
 			main.Ping.ImageColor3 = Color3.new(0.333333, 1, 0.498039)
 			main.Ping.ms.TextColor3 = Color3.new(0.333333, 1, 0.498039)
-			
 		else -- Low
 			main.Ping.Image = "rbxassetid://9189319213"
 			main.Ping.ImageColor3 = Color3.new(0.333333, 1, 0)
