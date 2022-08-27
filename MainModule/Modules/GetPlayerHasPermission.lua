@@ -15,7 +15,7 @@ return function(env,playerdata,permissionneeded)
 		return info.UI or false
 	end
 	
-	-- Disallow GameSettings in VIP Servers.
+	-- Disallow GameSettings in VIP Servers; It's safer that way, even with the sandboxed datastore.
 	if permissionneeded == "Nano.GameSettings" then
 		if (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then
 			return false;

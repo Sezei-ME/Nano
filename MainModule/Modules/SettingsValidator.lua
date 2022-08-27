@@ -12,19 +12,19 @@ return function(settings)
 	if type(settings.UI) == "table" then
 		-- It's a new loader!
 		if type(settings.UI.Size) == "table" then
-			if not type(settings.UI.Size.Width) == "number" then
+			if not (type(settings.UI.Size.Width) == "number" or type(settings.UI.Size.Width) == "string") then
 				settings.UI.Size.Width = 258;
 				table.insert(info,"UI Width was missing");
 			end
-			if not type(settings.UI.Size.Height) == "number" then
+			if not (type(settings.UI.Size.Height) == "number" or type(settings.UI.Size.Height) == "string") then
 				settings.UI.Size.Height = 245;
 				table.insert(info,"UI Height was missing");
 			end
-			if settings.UI.Size.Width < 230 then
+			if tonumber(settings.UI.Size.Width) < 230 then
 				settings.UI.Size.Width = 230;
 				table.insert(info,"UI Width was below 230");
 			end
-			if settings.UI.Size.Height < 245 then
+			if tonumber(settings.UI.Size.Height) < 245 then
 				settings.UI.Size.Height = 250;
 				table.insert(info,"UI Height was below 245");
 			end

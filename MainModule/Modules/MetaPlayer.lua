@@ -65,7 +65,7 @@ local function CreateMeta(env:any, plr:Player?)
 		if not player.InGame then return end;
 		senv.Event:FireClient(player.self,"Message",data);
 	end
-
+	
 	function player:Hint(data)
 		if not player.InGame then return end;
 		senv.Event:FireClient(player.self,"Hint",data);

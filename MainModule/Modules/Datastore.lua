@@ -75,10 +75,11 @@ local httpSvc = game:GetService("HttpService")
 local datacache = {};
 
 local disabled = false;
+local privateserver = false;
 
--- Check if the game is running on a private server; Datastore shall NOT be edited if it is, but allow for the use of the API specifically for getting data.
+-- Check if the game is running on a private server; Datastores will use a private version of itself, allowing VIP server sandboxing.
 if (game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0) then -- Checks if the game is running on a private server.
-	disabled = true; -- Disable the storage part of the module if it is.
+	privateserver = game.PrivateServerOwnerId;
 end
 
 --Information storage
@@ -94,17 +95,21 @@ local function error(debg,...)
 	if game:GetService("RunService"):IsStudio() then
 		print(debg)
 	end
-	
+
 	return olderror(...)
 end
 
 --Module
 function Module(name,env,...)
 	if not api then api = env end;
-	
+
+	if privateserver then -- Sandbox the datastore to the private server's owner ID.
+		name = name.."_Prv"..privateserver;
+	end
+
 	--Check if we've already done all the hard work, and if yes, just give them what we already have
 	if (categories[name]) then return categories[name] end
-	
+
 	if env.Data.Settings and env.Data.Settings.CloudAPI and env.Data.Settings.CloudAPI.Token then
 		if env.Data.Settings.CloudAPI.Token.UseToken then
 			local info = env.CloudAPI.Get("/tokenapi/"..env.Data.Settings.CloudAPI.Token.Key)
@@ -113,7 +118,7 @@ function Module(name,env,...)
 					if info.message == "This token does not belong to this game." then
 						warn("oops? someone dropped a wrong key...")
 						env.Data.Gamelock = {true,"Sezei.me API | This game is locked due to the game owner not setting it up correctly."};
-					elseif not info.message == "Success." then
+					elseif not (info.message == "Success.") then
 						warn("Even Easier Datastore | The token is not valid; Due to that, datastores will be used instead. Error info: "..info.message);
 						env.Data.Settings.CloudAPI.Token.UseToken = false;
 					else
@@ -128,7 +133,7 @@ function Module(name,env,...)
 			end
 		end
 	end
-		
+
 	--Oh no, it looks like we haven't dealt with this yet
 	if not datacache[name] then
 		datacache[name] = {};
@@ -151,11 +156,11 @@ function Module(name,env,...)
 		Task.Key = key
 		Task.Category = self
 		Task.Cancelled = false
-		
+
 		if type(data) == "table" then
 			data = "_tbl:"..httpSvc:JSONEncode(data);
 		end
-		
+
 		Task.Data = data
 
 		function Task:wait() 
@@ -350,7 +355,7 @@ function Module(name,env,...)
 		table.insert(taskQueue, tasks[key]) --Store it under a numerical value as well
 		return Task
 	end
-	
+
 	function DataCategory:Remove(key) -- Alias for Nullify
 		--Overwrite old data so we don't waste precious requests
 		if (tasks[key]) then tasks[key].Data = nil return tasks[key] end
@@ -438,7 +443,7 @@ task.spawn(function()
 								if datacache[Task.Category.Name][Task.Key] == data then warn("Even Easier Datastore | " .. Task.Key.." - Unnecessary save request!"); return end;
 								if not disabled then
 									Task.Category.Store:SetAsync(Task.Key,data) -- Save in here too just in-case the API will go down. - It'll destroy the Sync tho.
-									
+
 									pcall(function()
 										if api.Data.Settings.CloudAPI.Token.UseToken then
 											api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{data = data; typ = "set"})
@@ -449,14 +454,14 @@ task.spawn(function()
 							elseif (Task.Type == "Nullify") then
 								if not disabled then
 									Task.Category.Store:RemoveAsync(Task.Key)
-									
+
 									pcall(function()
 										if api.Data.Settings.CloudAPI.Token.UseToken then
 											api.CloudAPI.Post('/tokenapi/'..api.Data.Settings.CloudAPI.Token.Key ..'/'..Task.Key,{typ = "set"})
 										end
 									end)
 								end
-								
+
 								datacache[Task.Category.Name][Task.Key] = nil;
 							elseif (Task.Type == "Update") then
 								--Rather than making tons of requests to the datastore, we cumulate the modifier functions here

@@ -33,7 +33,7 @@ script.Parent:WaitForChild("ErrorCodes") -- Await server detection of the client
 if script.Parent:FindFirstChild("NightlyBuild") then
 	if script.Parent.NightlyBuild.Value == true then
 		nightly = true;
-		print("Nano Nightly (Client) | Started load; Only today's experiments will be printed out.");
+		print("Nano Nightly (Client) | Started load!");
 	end
 end
 
@@ -642,6 +642,7 @@ local function buildButtons(cmds) -- Build the UI button.
 				end)
 
 				btn.event:Connect(function()
+					local receiveddata = remote:InvokeServer("CommandOpened",cmd.Name);
 					command.Visible = true;
 					scroll.Visible = false;
 
@@ -751,11 +752,7 @@ local function buildButtons(cmds) -- Build the UI button.
 								bind:Fire("CommandChangedValue",remote:InvokeServer("CommandChangedValue",{cmd.Name,k,newval}));
 							end)
 						end
-
-
 					end
-
-					local receiveddata = remote:InvokeServer("CommandOpened",cmd.Name);
 
 					local pressed = false;
 					sendEvent = command.Send.MouseButton1Click:Connect(function()
@@ -994,11 +991,18 @@ end)
 
 local rankCache = {};
 
+local hoverhighlight:Highlight = Assets.Highlight:Clone();
+hoverhighlight.OutlineColor = Color3.new(1, 0.666667, 0);
+hoverhighlight.FillTransparency = 1;
+hoverhighlight.Parent = script;
+
 mouse.Move:Connect(function()
+	if not uiInUse then return end; 
 	mfollow.Position = UDim2.fromOffset(mouse.X+3,mouse.Y+40);
-	if mouse.Target and mouse.Target:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and mouse.Target:FindFirstAncestorOfClass("Model"):FindFirstChild("Humanoid") and not mouseinUI then
+	if mouse.Target and mouse.Target:FindFirstAncestorWhichIsA("Model") and mouse.Target:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and not mouseinUI then
+		hoverhighlight.Adornee = mouse.Target:FindFirstAncestorWhichIsA("Model");
 		local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
-		if not mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart then mfollow.Hover_3d.Text = ""; mfollow.Hover_3d.Visible = false; return; end;
+		if not mouse.Target:FindFirstAncestorWhichIsA("Model"):FindFirstChild("HumanoidRootPart") then mfollow.Hover_3d.Text = ""; mfollow.Hover_3d.Visible = false; return; end;
 		local pos1 = char.HumanoidRootPart.Position
 		local pos2 = mouse.Target:FindFirstAncestorWhichIsA("Model").HumanoidRootPart.Position
 		mfollow.Hover_3d.Text = " <b>"..mouse.Target:FindFirstAncestorWhichIsA("Model").Name.. "</b>\nDistance: "..math.floor((pos1 - pos2).magnitude).." Studs"
@@ -1026,6 +1030,7 @@ mouse.Move:Connect(function()
 	else
 		mfollow.Hover_3d.Text = "";
 		mfollow.Hover_3d.Visible = false;
+		hoverhighlight.Adornee = nil;
 	end
 end)
 
@@ -1065,6 +1070,7 @@ bind.Event:Connect(function(event,inst)
 	elseif event == "ToggleInUse" then
 		uiInUse = inst
 		mfollow.Visible = uiInUse;
+		hoverhighlight.Adornee = nil;
 	elseif event == "SettingChanged" then -- {setting,value}
 		-- Settings structure: [name] = {isLocal, value}
 		settings[inst[1]][2] = inst[2]
@@ -1899,8 +1905,8 @@ task.spawn(function()
 			main.Ping.ms.TextColor3 = Color3.new(1,1,0.498039)
 		elseif res <= 50 then -- Very Low
 			main.Ping.Image = "rbxassetid://9189319213"
-			main.Ping.ImageColor3 = Color3.new(0.333333, 1, 0.498039)
-			main.Ping.ms.TextColor3 = Color3.new(0.333333, 1, 0.498039)
+			main.Ping.ImageColor3 = Color3.new(0.333333, 1, 0.890196)
+			main.Ping.ms.TextColor3 = Color3.new(0.333333, 1, 0.890196)
 		else -- Low
 			main.Ping.Image = "rbxassetid://9189319213"
 			main.Ping.ImageColor3 = Color3.new(0.333333, 1, 0)

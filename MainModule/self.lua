@@ -17,12 +17,12 @@ if script:FindFirstChild("WARNING - THIS IS A BETA BUILD!") then
 	betabuild = true;
 	env.NightlyBuild = true;
 	env.InternalBuild = "NIGHTLY "..env.TrueBuild;
-	
+
 	local nightlyval = Instance.new("BoolValue",script.NanoUI);
 	nightlyval.Name = "NightlyBuild";
 	nightlyval.Value = true;
 	nightlyval.Parent = script.NanoUI;
-	
+
 	script:FindFirstChild("WARNING - THIS IS A BETA BUILD!"):Remove()
 end
 
@@ -123,6 +123,10 @@ function toCommands(folder,stack)
 					end
 					mv.OnLoad = nil;
 				end
+				
+				if env.Data.Commands[string.lower(mv.Name)] then
+					warn("A command has been overwritten by a different one due to the same name >> "..env.Data.Commands[string.lower(mv.Name)][2].."."..env.Data.Commands[string.lower(mv.Name)][1].Name.." has been rewritten by "..stack.."."..mv.Name)
+				end
 				-- Set the command in place: [name] = {module,stack}
 				env.Data.Commands[string.lower(mv.Name)] = {mv,stack}
 			end)
@@ -216,7 +220,7 @@ function handleJoin(p)
 							repeat 
 								task.wait(120) -- Because they have no history of being banned, we can increase the check time from 60 seconds to 120 seconds because usually it means they have no reason to be checked again.
 								pinfo = bandata[p.UserId];
-							until pinfo.active or not p;
+							until (pinfo and pinfo.active) or not p;
 							if pinfo.active and p then
 								p:Kick("\nSezei.me API\n----------------\n\nYou are cloud banned from all games with Sezei.me products.\n\nReason:\n"..pinfo.reason)
 							end
@@ -443,6 +447,8 @@ task.spawn(function()
 				end
 			end
 		end
+		
+		ticks -= 1;
 
 		if ticks <= 0 then
 			-- Check the banlist again to see if any bans have updated.
@@ -535,8 +541,8 @@ if firstCall then
 				end
 			end
 		end
-		
-		script.NanoUI.Main.Size = UDim2.fromOffset(env.Data.Settings.UI.Size.Width,env.Data.Settings.UI.Size.Height)
+
+		script.NanoUI.Main.Size = UDim2.fromOffset((tonumber(env.Data.Settings.UI.Size.Width) or 258),(tonumber(env.Data.Settings.UI.Size.Height) or 245))
 		script.NanoUI.Main.Position = UDim2.new(0, -(env.Data.Settings.UI.Size.Width), 1, -10)
 
 		env.Data.Commands = {}
