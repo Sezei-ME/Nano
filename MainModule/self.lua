@@ -250,7 +250,7 @@ function handleJoin(p)
 		end
 
 		-- Version BETA_PRE3#6 (58); Added VIP Owner and Default FlagGroups.
-		-- Normal -> Groups -> VIPOwner -> Gamepasses -> Default
+		-- Normal -> Groups -> VIPOwner -> Gamepasses -> Default -> Non-Admin
 
 		local groups = {};
 		local gamepasses = {};

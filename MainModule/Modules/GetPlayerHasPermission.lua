@@ -1,14 +1,13 @@
 return function(env,playerdata,permissionneeded)
-	
 	if type(playerdata) == 'userdata' then -- Likely they sent the player instead of the playerdata, better not punish the devs over it.
 		playerdata = env.GetPlayerData(env,playerdata)
 	end
 	local info = env.GetGroupInfo(env,playerdata);
 	local perms = string.split(info.Flags,";");
-	local permissionfolder = string.split(permissionneeded,".");
-	
+	local permissionfolder = string.split(string.lower(permissionneeded),".");
+
 	env.Bind:Fire("PermissionChecked",playerdata.UserId,permissionneeded);
-	
+
 	if permissionneeded == "Chat" then
 		return info.Chat or false
 	elseif permissionneeded == "UI" then
@@ -21,12 +20,12 @@ return function(env,playerdata,permissionneeded)
 			return false;
 		end
 	end	
-	
+
 	for _,v in pairs(perms) do
 		if v == "*" then -- Giving root admin is extremely dangerous; it ignores negatives.
 			return true;
 		else
-			local localperm = string.split(v,".");
+			local localperm = string.split(string.lower(v),".");
 			local negative = (localperm[1]:sub(1,1) == "-")
 			if negative then
 				localperm[1] = localperm[1]:sub(2);

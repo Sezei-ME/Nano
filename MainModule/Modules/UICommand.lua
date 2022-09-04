@@ -49,10 +49,12 @@ return function(env,player,commanddata,fullmsg,ignorechatperm)
 	if group.UI then
 		local args = fullmsg;
 		local command = commanddata[1];
-		if commanddata[1].SpecificPerm then
-			if not env.GetPlayerHasPermission(env,playerdata,commanddata[1].SpecificPerm) then env.Notify(player,{"no_permission","Specific permission for this command is missing: "..commanddata[1].SpecificPerm}); return false end;
-		else
-			if not env.GetPlayerHasPermission(env,playerdata,commanddata[2]) then env.Notify(player,{"no_permission","Permission for this command is missing."}); return false end;
+		if not commanddata[1].ForEveryone then
+			if commanddata[1].SpecificPerm then
+				if not env.GetPlayerHasPermission(env,playerdata,commanddata[1].SpecificPerm) then env.Notify(player,{"no_permission","Specific permission for this command is missing: "..commanddata[1].SpecificPerm}); return false end;
+			else
+				if not env.GetPlayerHasPermission(env,playerdata,commanddata[2].."."..commanddata[1].Name) then env.Notify(player,{"no_permission","Permission for this command is missing."}); return false end;
+			end
 		end
 		
 		local commanddata = commanddata[1]

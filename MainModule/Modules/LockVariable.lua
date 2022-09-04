@@ -1,4 +1,4 @@
--- Deprecated.
+-- DEPRECATION WARNING: Upon the release of the 4th phase of the beta, this module will be removed!
 
 local freezetbl = {}
 local vars = {}

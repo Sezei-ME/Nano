@@ -59,11 +59,16 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 
 	-- Add the command to the logs.
 	table.insert(env.Logs.Commands,1,{os.time(),player.UserId,"Chat",fullmsg});
-	
+
 	-- Check permissions.
 	local group = env.GetGroupInfo(env,playerdata)
 	if not group then env.Notify(player,{"script_error","A group was not found for "..player.Name}) end;
-
+	
+	-- Check if the command is a ForEveryone one
+	if commanddata[1].ForEveryone then
+		ignorechatperm = true;
+	end
+	
 	-- Check if the player has permission to use the command.
 	if group.Chat or ignorechatperm then
 		if not ignorechatperm and commanddata[1].ChatDisabled then return env.Notify(player,{"bulb","This command is disabled for chat invokes."}) end
@@ -73,10 +78,12 @@ return function(env,player,playerdata,commanddata,fullmsg,ignorechatperm)
 
 		local args = string.split(fullmsg,env.Data.Settings.ChatCommands.Sep);
 		local command = commanddata[1];
-		if commanddata[1].SpecificPerm then
-			if not env.GetPlayerHasPermission(env,playerdata,commanddata[1].SpecificPerm) then env.Notify(player,{"no_permission","Specific permission for this command is missing: "..commanddata[1].SpecificPerm}); return false end;
-		else
-			if not env.GetPlayerHasPermission(env,playerdata,commanddata[2]) then env.Notify(player,{"no_permission","Permission for this command is missing."}); return false end;
+		if not command.ForEveryone then -- Since the command is marked as ForEveryone, ignore the permission check.
+			if command.SpecificPerm then
+				if not env.GetPlayerHasPermission(env,playerdata,command.SpecificPerm) then env.Notify(player,{"no_permission","Specific permission for this command is missing: "..commanddata[1].SpecificPerm}); return false end;
+			else
+				if not env.GetPlayerHasPermission(env,playerdata,commanddata[2].."."..command.Name) then env.Notify(player,{"no_permission","Permission for this command is missing."}); return false end;
+			end
 		end
 
 		local commanddata = commanddata[1]

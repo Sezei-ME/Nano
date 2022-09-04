@@ -1118,13 +1118,13 @@ for uid,conts in pairs(commandContributions) do
 		end)
 	end
 	if conts > 100 then
-		if t == "" then t = "Commands Hacker ("..conts..")" else t..="\nCommands Hacker ("..conts..")" end
+		if t == "" then t = "Commands Hacker: "..conts else t..="\nCommands Hacker: "..conts end
 	elseif conts > 50 then
-		if t == "" then t = "Command Master ("..conts..")" else t..="\nCommand Master ("..conts..")" end
+		if t == "" then t = "Command Master: "..conts else t..="\nCommand Master: "..conts end
 	elseif conts > 25 then
-		if t == "" then t = "Command Developer ("..conts..")" else t..="\nCommand Developer ("..conts..")" end
+		if t == "" then t = "Command Developer: "..conts else t..="\nCommand Developer: "..conts end
 	elseif conts > 10 then -- Someone has been busy, huh? Wouldn't be fair to make it all in vain. (Rewards 'Command Maker' title in the credits section, unless they already have a title.)
-		if t == "" then t = "Command Maker ("..conts..")" else t..="\nCommand Maker ("..conts..")" end
+		if t == "" then t = "Command Maker: "..conts else t..="\nCommand Maker: "..conts end
 	else
 		if t == "" then t = "Command Contributions: "..conts else t..="\nCommand Contributions: "..conts end
 	end
@@ -1429,9 +1429,6 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 				elseif v["Name"] then
 					bubble = NanoWorks:CreateBubble(v.Name);
 				elseif v["Group"] then
-					if nightly then
-						print("Nano Client | Group type was found!")
-					end
 					-- It has to be handled separately due to how the tables here work.
 					-- Github copilot may or may not have been used here...
 
@@ -1442,17 +1439,10 @@ if remote:InvokeServer("HasPermission","Nano.GameSettings") then
 					local rolenames = {}
 
 					for _,v in pairs(group.Roles) do
-						if nightly then
-							print("Nano Client | Added role "..tostring(v.Rank).." as "..tostring(v.Name))
-						end
 						rolenames[tonumber(v.Rank)] = v.Name;
 					end
 
 					for rank,flg in pairs(v.Rank) do
-						if nightly then
-							print("Nano Client | Building for "..rank)
-						end
-						print("Nano Client |",rank,rolenames[tonumber(rank)]);
 						local rnk = NanoWorks:CreateBubble("Rank - "..(rolenames[tonumber(rank)] or tostring(rank)));
 						rnk.self.Parent = bubble.self.Outer.Inner;
 						rnk.self.Visible = true;
@@ -1860,6 +1850,7 @@ local res = math.floor(math.abs(tick() - starttick) * 1000)
 remote:InvokeServer("PingRes",res) -- Let the server know what ping the player is at.
 main.Ping.ms.Text = tostring(res).."ms"
 
+--[[
 local PingSentences = {
 	"HOW DID YOUR PING GET THIS HIGH?",
 	"RIP PING LOL",
@@ -1868,6 +1859,7 @@ local PingSentences = {
 	"MCDONALDS WIFI MUST SUCK HUH?",
 	"WHEN ARE YOU GOING TO GET BETTER INTERNET?"
 }
+]]
 
 task.spawn(function()
 	while task.wait(2) do -- PINGER
